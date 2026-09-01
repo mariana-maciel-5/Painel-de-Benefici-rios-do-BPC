@@ -1,0 +1,6 @@
+{
+  "name": "Painel de Beneficiario BPC do Recife",
+  "description": "Painel para gestão de beneficiários BPC no Recife",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

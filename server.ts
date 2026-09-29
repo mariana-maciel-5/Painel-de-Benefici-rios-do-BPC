@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import Fastify from 'fastify';
 import middie from '@fastify/middie';
 import fastifyStatic from '@fastify/static';

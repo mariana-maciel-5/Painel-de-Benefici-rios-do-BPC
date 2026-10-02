@@ -23,8 +23,14 @@ async function startServer() {
       server: { middlewareMode: true },
       appType: 'spa',
     });
-    // Middleware do Vite para desenvolvimento
-    fastify.use(vite.middlewares);
+    // Middleware do Vite para desenvolvimento (bypassa /api para as rotas do Fastify)
+    fastify.use((req, res, next) => {
+      const url = req.originalUrl || req.url || '';
+      if (url.startsWith('/api/') || url === '/api') {
+        return next();
+      }
+      vite.middlewares(req, res, next);
+    });
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     await fastify.register(fastifyStatic, {
@@ -34,6 +40,13 @@ async function startServer() {
     
     // Fallback para SPA em produÃ§Ã£o
     fastify.get('*', async (request, reply) => {
+      if (request.url.startsWith('/api/') || request.url === '/api') {
+        return reply.status(404).send({
+          statusCode: 404,
+          error: 'Not Found',
+          message: `Rota ${request.method}:${request.url} não encontrada`,
+        });
+      }
       return reply.sendFile('index.html');
     });
   }

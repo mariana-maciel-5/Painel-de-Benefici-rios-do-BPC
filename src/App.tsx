@@ -7,13 +7,37 @@ import { useEffect, useState } from 'react';
 
 export default function App() {
   const [health, setHealth] = useState<string>('Carregando...');
+  const [dbInfo, setDbInfo] = useState<{ success?: boolean; message?: string } | null>(null);
+  const [syncing, setSyncing] = useState<boolean>(false);
 
-  useEffect(() => {
+  const fetchHealth = () => {
     fetch('/api/health')
       .then(res => res.json())
-      .then(data => setHealth(data.message))
-      .catch(err => setHealth('Erro ao conectar com a API.'));
+      .then(data => {
+        setHealth(data.message);
+        if (data.banco_de_dados) {
+          setDbInfo(data.banco_de_dados);
+        }
+      })
+      .catch(() => setHealth('Erro ao conectar com a API.'));
+  };
+
+  useEffect(() => {
+    fetchHealth();
   }, []);
+
+  const handleSyncDb = async () => {
+    setSyncing(true);
+    try {
+      const res = await fetch('/api/db/init');
+      const data = await res.json();
+      setDbInfo(data);
+    } catch (err: any) {
+      setDbInfo({ success: false, message: 'Erro ao chamar sincronização.' });
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   return (
     <div className="flex h-screen w-full bg-slate-50 font-sans overflow-hidden text-slate-800">
@@ -107,8 +131,34 @@ export default function App() {
               <h2 className="font-bold text-slate-700 uppercase text-xs tracking-widest">Status da Configuração do Backend</h2>
             </div>
             <div className="p-6">
-              <div className="bg-blue-50 border border-blue-100 text-blue-800 px-4 py-3 rounded-xl mb-6">
-                <p className="font-medium text-sm">Status do Backend (Fastify): {health}</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div className="bg-blue-50 border border-blue-100 text-blue-800 px-4 py-3 rounded-xl flex items-center justify-between">
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-blue-600 font-bold">Servidor Fastify</p>
+                    <p className="font-medium text-sm mt-0.5">{health}</p>
+                  </div>
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                </div>
+
+                <div className={`px-4 py-3 rounded-xl border flex items-center justify-between ${
+                  dbInfo?.success 
+                    ? 'bg-emerald-50 border-emerald-100 text-emerald-800' 
+                    : 'bg-amber-50 border-amber-200 text-amber-900'
+                }`}>
+                  <div className="pr-2">
+                    <p className="text-xs uppercase tracking-wider font-bold">Banco de Dados MySQL</p>
+                    <p className="font-medium text-xs mt-0.5 max-w-xs md:max-w-sm truncate" title={dbInfo?.message || 'Verificando...'}>
+                      {dbInfo ? dbInfo.message : 'Aguardando verificação...'}
+                    </p>
+                  </div>
+                  <button 
+                    onClick={handleSyncDb} 
+                    disabled={syncing}
+                    className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white border border-slate-200 shadow-xs hover:bg-slate-50 transition-all cursor-pointer disabled:opacity-50 text-slate-700 whitespace-nowrap"
+                  >
+                    {syncing ? 'Sincronizando...' : 'Sincronizar'}
+                  </button>
+                </div>
               </div>
 
               <div className="text-sm text-slate-600">

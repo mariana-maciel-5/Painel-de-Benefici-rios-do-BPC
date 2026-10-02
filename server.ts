@@ -4,17 +4,30 @@ import middie from '@fastify/middie';
 import fastifyStatic from '@fastify/static';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
+import { initDatabase } from './src/db/init';
 
 async function startServer() {
   const fastify = Fastify({ logger: true });
   const PORT = 3000;
 
-  // Registrar middie para middlewares no estilo Express (necessÃ¡rio para o Vite)
+  // Registrar middie para middlewares no estilo Express (necessário para o Vite)
   await fastify.register(middie);
+
+  // Inicializa as tabelas no MySQL se a conexão estiver disponível
+  let dbStatus = await initDatabase();
 
   // Rotas de API devem vir ANTES do middleware do Vite
   fastify.get('/api/health', async (request, reply) => {
-    return { status: 'ok', message: 'API rodando perfeitamente!' };
+    return {
+      status: 'ok',
+      message: 'API rodando perfeitamente!',
+      banco_de_dados: dbStatus,
+    };
+  });
+
+  fastify.all('/api/db/init', async (request, reply) => {
+    dbStatus = await initDatabase();
+    return dbStatus;
   });
 
   // IntegraÃ§Ã£o com o Vite (Modo Dev) ou Static (Modo Prod)

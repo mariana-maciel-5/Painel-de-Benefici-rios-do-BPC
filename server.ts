@@ -5,6 +5,8 @@ import fastifyStatic from '@fastify/static';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { initDatabase } from './src/db/init';
+import { runSeed } from './src/db/seed';
+import { poolConnection } from './src/db';
 
 async function startServer() {
   const fastify = Fastify({ logger: true });
@@ -28,6 +30,53 @@ async function startServer() {
   fastify.all('/api/db/init', async (request, reply) => {
     dbStatus = await initDatabase();
     return dbStatus;
+  });
+
+  fastify.all('/api/db/seed', async (request, reply) => {
+    const result = await runSeed();
+    return result;
+  });
+
+  fastify.get('/api/usuarios', async (request, reply) => {
+    try {
+      const [rows] = await poolConnection.query(`
+        SELECT u.id, u.nome, u.email, u.ativo, u.data_criacao,
+               COALESCE(GROUP_CONCAT(p.nome SEPARATOR ', '), 'Sem papel') as papel
+        FROM usuarios u
+        LEFT JOIN usuario_papel up ON u.id = up.usuario_id
+        LEFT JOIN papeis p ON up.papel_id = p.id
+        GROUP BY u.id
+        ORDER BY u.id ASC
+      `);
+      return { success: true, data: rows };
+    } catch (err: any) {
+      return reply.status(500).send({ success: false, message: err.message, data: [] });
+    }
+  });
+
+  fastify.get('/api/papeis', async (request, reply) => {
+    try {
+      const [rows] = await poolConnection.query(`
+        SELECT p.id, p.nome, p.descricao, p.data_criacao,
+               COUNT(pp.permissao_id) as total_permissoes
+        FROM papeis p
+        LEFT JOIN papel_permissao pp ON p.id = pp.papel_id
+        GROUP BY p.id
+        ORDER BY p.id ASC
+      `);
+      return { success: true, data: rows };
+    } catch (err: any) {
+      return reply.status(500).send({ success: false, message: err.message, data: [] });
+    }
+  });
+
+  fastify.get('/api/permissoes', async (request, reply) => {
+    try {
+      const [rows] = await poolConnection.query(`SELECT * FROM permissoes ORDER BY id ASC`);
+      return { success: true, data: rows };
+    } catch (err: any) {
+      return reply.status(500).send({ success: false, message: err.message, data: [] });
+    }
   });
 
   // IntegraÃ§Ã£o com o Vite (Modo Dev) ou Static (Modo Prod)

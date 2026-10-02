@@ -11,6 +11,7 @@
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
     "db:studio": "drizzle-kit studio",
+    "db:seed": "tsx src/db/seed.ts",
     "clean": "rm -rf dist server.js dist/server.cjs",
     "lint": "tsc --noEmit"
   },

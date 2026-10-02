@@ -9,6 +9,20 @@ export default function App() {
   const [health, setHealth] = useState<string>('Carregando...');
   const [dbInfo, setDbInfo] = useState<{ success?: boolean; message?: string } | null>(null);
   const [syncing, setSyncing] = useState<boolean>(false);
+  const [seeding, setSeeding] = useState<boolean>(false);
+  const [usuarios, setUsuarios] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'usuarios' | 'esquema'>('usuarios');
+
+  const fetchUsuarios = () => {
+    fetch('/api/usuarios')
+      .then(res => res.json())
+      .then(res => {
+        if (res.success && Array.isArray(res.data)) {
+          setUsuarios(res.data);
+        }
+      })
+      .catch(() => {});
+  };
 
   const fetchHealth = () => {
     fetch('/api/health')
@@ -24,6 +38,7 @@ export default function App() {
 
   useEffect(() => {
     fetchHealth();
+    fetchUsuarios();
   }, []);
 
   const handleSyncDb = async () => {
@@ -36,6 +51,20 @@ export default function App() {
       setDbInfo({ success: false, message: 'Erro ao chamar sincronização.' });
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const handleRunSeed = async () => {
+    setSeeding(true);
+    try {
+      const res = await fetch('/api/db/seed');
+      const data = await res.json();
+      setDbInfo(data);
+      fetchUsuarios();
+    } catch (err: any) {
+      setDbInfo({ success: false, message: 'Erro ao executar o seed.' });
+    } finally {
+      setSeeding(false);
     }
   };
 
@@ -151,51 +180,142 @@ export default function App() {
                       {dbInfo ? dbInfo.message : 'Aguardando verificação...'}
                     </p>
                   </div>
-                  <button 
-                    onClick={handleSyncDb} 
-                    disabled={syncing}
-                    className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white border border-slate-200 shadow-xs hover:bg-slate-50 transition-all cursor-pointer disabled:opacity-50 text-slate-700 whitespace-nowrap"
-                  >
-                    {syncing ? 'Sincronizando...' : 'Sincronizar'}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={handleSyncDb} 
+                      disabled={syncing}
+                      className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white border border-slate-200 shadow-xs hover:bg-slate-50 transition-all cursor-pointer disabled:opacity-50 text-slate-700 whitespace-nowrap"
+                    >
+                      {syncing ? 'Sincronizando...' : 'Sincronizar'}
+                    </button>
+                    <button 
+                      onClick={handleRunSeed} 
+                      disabled={seeding}
+                      className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white shadow-xs hover:bg-blue-700 transition-all cursor-pointer disabled:opacity-50 whitespace-nowrap"
+                    >
+                      {seeding ? 'Populando...' : '🌱 Popular Seed'}
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <div className="text-sm text-slate-600">
-                <p className="mb-4">As seguintes entidades de banco de dados (MySQL) foram configuradas no backend com Drizzle ORM:</p>
-                <div className="rounded-xl border border-slate-200 overflow-hidden">
-                  <table className="w-full text-left border-collapse">
-                    <thead className="bg-slate-50 text-[10px] uppercase font-bold text-slate-500 border-b border-slate-100">
-                      <tr>
-                        <th className="px-6 py-3">Tabela</th>
-                        <th className="px-6 py-3">Esquema de Colunas</th>
-                      </tr>
-                    </thead>
-                    <tbody className="text-sm text-slate-600">
-                      <tr className="border-b border-slate-50">
-                        <td className="px-6 py-4 font-medium text-slate-800">usuarios</td>
-                        <td className="px-6 py-4 font-mono text-xs text-slate-500">id, nome, email, senha, ativo, data_criacao, data_atualizacao</td>
-                      </tr>
-                      <tr className="border-b border-slate-50">
-                        <td className="px-6 py-4 font-medium text-slate-800">papeis</td>
-                        <td className="px-6 py-4 font-mono text-xs text-slate-500">id, nome, descricao, data_criacao, data_atualizacao</td>
-                      </tr>
-                      <tr className="border-b border-slate-50">
-                        <td className="px-6 py-4 font-medium text-slate-800">permissoes</td>
-                        <td className="px-6 py-4 font-mono text-xs text-slate-500">id, nome, descricao, data_criacao, data_atualizacao</td>
-                      </tr>
-                      <tr className="border-b border-slate-50">
-                        <td className="px-6 py-4 font-medium text-slate-800">usuario_papel</td>
-                        <td className="px-6 py-4 font-mono text-xs text-slate-500">usuario_id, papel_id</td>
-                      </tr>
-                      <tr>
-                        <td className="px-6 py-4 font-medium text-slate-800">papel_permissao</td>
-                        <td className="px-6 py-4 font-mono text-xs text-slate-500">papel_id, permissao_id</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
+              {/* Abas de visualização */}
+              <div className="flex border-b border-slate-200 mb-4 gap-4">
+                <button
+                  onClick={() => setActiveTab('usuarios')}
+                  className={`pb-2 text-sm font-semibold cursor-pointer transition-colors border-b-2 ${
+                    activeTab === 'usuarios'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  Usuários no Banco ({usuarios.length})
+                </button>
+                <button
+                  onClick={() => setActiveTab('esquema')}
+                  className={`pb-2 text-sm font-semibold cursor-pointer transition-colors border-b-2 ${
+                    activeTab === 'esquema'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  Estrutura das 5 Entidades
+                </button>
               </div>
+
+              {activeTab === 'usuarios' ? (
+                <div className="text-sm text-slate-600">
+                  {usuarios.length > 0 ? (
+                    <div className="rounded-xl border border-slate-200 overflow-hidden">
+                      <table className="w-full text-left border-collapse">
+                        <thead className="bg-slate-50 text-[10px] uppercase font-bold text-slate-500 border-b border-slate-100">
+                          <tr>
+                            <th className="px-6 py-3">ID</th>
+                            <th className="px-6 py-3">Nome</th>
+                            <th className="px-6 py-3">Email</th>
+                            <th className="px-6 py-3">Papel Vinculado</th>
+                            <th className="px-6 py-3">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="text-sm text-slate-600">
+                          {usuarios.map((u) => (
+                            <tr key={u.id} className="border-b border-slate-50 hover:bg-slate-50/50">
+                              <td className="px-6 py-4 font-mono text-xs">{u.id}</td>
+                              <td className="px-6 py-4 font-medium text-slate-800">{u.nome}</td>
+                              <td className="px-6 py-4">{u.email}</td>
+                              <td className="px-6 py-4">
+                                <span className="bg-blue-50 text-blue-700 border border-blue-100 px-2.5 py-0.5 rounded-full text-xs font-medium">
+                                  {u.papel || 'Sem papel'}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${
+                                  u.ativo ? 'text-emerald-700' : 'text-slate-400'
+                                }`}>
+                                  <span className={`w-2 h-2 rounded-full ${
+                                    u.ativo ? 'bg-emerald-500' : 'bg-slate-300'
+                                  }`} />
+                                  {u.ativo ? 'Ativo' : 'Inativo'}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="p-8 text-center bg-slate-50 rounded-xl border border-dashed border-slate-300">
+                      <p className="text-slate-600 font-medium mb-1">Nenhum usuário carregado do banco no momento.</p>
+                      <p className="text-xs text-slate-400 mb-4">
+                        Clique em <strong>"🌱 Popular Seed"</strong> para criar automaticamente os 6 usuários, papéis e permissões no MySQL.
+                      </p>
+                      <button
+                        onClick={handleRunSeed}
+                        disabled={seeding}
+                        className="px-4 py-2 text-xs font-semibold rounded-lg bg-blue-600 text-white shadow-xs hover:bg-blue-700 transition-all cursor-pointer disabled:opacity-50"
+                      >
+                        {seeding ? 'Populando dados...' : 'Executar Seed Agora'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-sm text-slate-600">
+                  <p className="mb-4">As seguintes entidades de banco de dados (MySQL) foram configuradas no backend com Drizzle ORM:</p>
+                  <div className="rounded-xl border border-slate-200 overflow-hidden">
+                    <table className="w-full text-left border-collapse">
+                      <thead className="bg-slate-50 text-[10px] uppercase font-bold text-slate-500 border-b border-slate-100">
+                        <tr>
+                          <th className="px-6 py-3">Tabela</th>
+                          <th className="px-6 py-3">Esquema de Colunas</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-sm text-slate-600">
+                        <tr className="border-b border-slate-50">
+                          <td className="px-6 py-4 font-medium text-slate-800">usuarios</td>
+                          <td className="px-6 py-4 font-mono text-xs text-slate-500">id, nome, email, senha, ativo, data_criacao, data_atualizacao</td>
+                        </tr>
+                        <tr className="border-b border-slate-50">
+                          <td className="px-6 py-4 font-medium text-slate-800">papeis</td>
+                          <td className="px-6 py-4 font-mono text-xs text-slate-500">id, nome, descricao, data_criacao, data_atualizacao</td>
+                        </tr>
+                        <tr className="border-b border-slate-50">
+                          <td className="px-6 py-4 font-medium text-slate-800">permissoes</td>
+                          <td className="px-6 py-4 font-mono text-xs text-slate-500">id, nome, descricao, data_criacao, data_atualizacao</td>
+                        </tr>
+                        <tr className="border-b border-slate-50">
+                          <td className="px-6 py-4 font-medium text-slate-800">usuario_papel</td>
+                          <td className="px-6 py-4 font-mono text-xs text-slate-500">usuario_id, papel_id</td>
+                        </tr>
+                        <tr>
+                          <td className="px-6 py-4 font-medium text-slate-800">papel_permissao</td>
+                          <td className="px-6 py-4 font-mono text-xs text-slate-500">papel_id, permissao_id</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </section>

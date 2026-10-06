@@ -7,9 +7,28 @@ Aplicação completa (Backend Node.js/Fastify + MySQL e Frontend React/Tailwind)
 ## 🚀 Tecnologias Utilizadas
 
 - **Backend**: Node.js, Fastify, `@fastify/middie`, `@fastify/static`
+- **Autenticação**: JSON Web Token (`jsonwebtoken`), Hash Seguro (`bcryptjs`)
 - **Banco de Dados**: MySQL (`bpc_recife_d`)
 - **ORM & Migrações**: Drizzle ORM, Drizzle Kit, `mysql2`
 - **Frontend**: React 19, TypeScript, Tailwind CSS, Lucide Icons
+
+---
+
+## 🔐 Autenticação JWT (JSON Web Token)
+
+Todas as rotas privadas de dados (`/api/usuarios`, `/api/papeis`, `/api/permissoes`, `/api/auth/me`) exigem o cabeçalho HTTP:
+```http
+Authorization: Bearer <seu_token_jwt>
+```
+Se o token não for enviado ou for inválido/expirado, o backend retornará `401 Unauthorized`.
+
+### Credenciais de Demonstração (Seed):
+- **Mariana Maciel (Admin Geral)**:
+  - Email: `mariana.maciel@recife.pe.gov.br`
+  - Senha: `123456`
+- **Carlos Eduardo Bezerra (Assistente Social)**:
+  - Email: `carlos.bezerra@recife.pe.gov.br`
+  - Senha: `123456`
 
 ---
 
@@ -27,7 +46,58 @@ Aplicação completa (Backend Node.js/Fastify + MySQL e Frontend React/Tailwind)
 
 A API roda por padrão na porta `3000` (ex: `http://localhost:3000`). Todas as rotas de backend possuem o prefixo `/api`.
 
-### 1. `GET /api/health`
+### 1. `POST /api/auth/login`
+Autentica o usuário com email e senha, retornando o token JWT e as informações de perfil.
+
+- **Método**: `POST`
+- **URL**: `http://localhost:3000/api/auth/login`
+- **Body (JSON)**:
+  ```json
+  {
+    "email": "mariana.maciel@recife.pe.gov.br",
+    "senha": "123456"
+  }
+  ```
+- **Exemplo de Resposta (Status 200)**:
+  ```json
+  {
+    "success": true,
+    "message": "Autenticação realizada com sucesso!",
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "usuario": {
+      "id": 1,
+      "email": "mariana.maciel@recife.pe.gov.br",
+      "nome": "Mariana Maciel",
+      "papeis": ["Administrador Geral"],
+      "permissoes": ["beneficiarios:visualizar", "beneficiarios:cadastrar", "usuarios:gerenciar"]
+    }
+  }
+  ```
+
+---
+
+### 2. `GET /api/auth/me` *(Protegido por JWT)*
+Retorna os dados e claims do usuário autenticado no momento.
+
+- **Método**: `GET`
+- **URL**: `http://localhost:3000/api/auth/me`
+- **Headers**: `Authorization: Bearer <token>`
+- **Exemplo de Resposta (Status 200)**:
+  ```json
+  {
+    "success": true,
+    "usuario": {
+      "id": 1,
+      "email": "mariana.maciel@recife.pe.gov.br",
+      "nome": "Mariana Maciel",
+      "papeis": ["Administrador Geral"]
+    }
+  }
+  ```
+
+---
+
+### 3. `GET /api/health`
 Verifica a integridade do servidor Fastify e o status da conexão com o banco de dados MySQL.
 
 - **Método**: `GET`

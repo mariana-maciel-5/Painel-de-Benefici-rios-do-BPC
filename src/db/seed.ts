@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import bcrypt from 'bcryptjs';
 import { poolConnection } from './index';
 import { initDatabase } from './init';
 
@@ -53,8 +54,8 @@ export async function runSeed() {
       );
     }
 
-    // 3. Usuários Mockados (com hash de demonstração)
-    const defaultPasswordHash = '$2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQmG6W65Wv5W96tH0jE4.';
+    // 3. Usuários Mockados (senha padrão: 123456)
+    const defaultPasswordHash = bcrypt.hashSync('123456', 10);
 
     const usuariosData = [
       { id: 1, nome: 'Mariana Maciel', email: 'mariana.maciel@recife.pe.gov.br', senha: defaultPasswordHash, ativo: true },
@@ -68,7 +69,7 @@ export async function runSeed() {
     for (const u of usuariosData) {
       await connection.query(
         `INSERT INTO usuarios (id, nome, email, senha, ativo) VALUES (?, ?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE nome = VALUES(nome), ativo = VALUES(ativo)`,
+         ON DUPLICATE KEY UPDATE nome = VALUES(nome), senha = VALUES(senha), ativo = VALUES(ativo)`,
         [u.id, u.nome, u.email, u.senha, u.ativo]
       );
     }

@@ -82,7 +82,7 @@ export async function initDatabase() {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
       `);
 
-      // 6. Tabela beneficiarios (com suporte a filtros de bairro e período)
+      // 6. Tabela beneficiarios
       await connection.query(`
         CREATE TABLE IF NOT EXISTS beneficiarios (
           id INT AUTO_INCREMENT PRIMARY KEY,
@@ -109,30 +109,46 @@ export async function initDatabase() {
         await connection.query(`ALTER TABLE beneficiarios ADD COLUMN IF NOT EXISTS rpa VARCHAR(20) AFTER bairro;`);
         await connection.query(`ALTER TABLE beneficiarios ADD COLUMN IF NOT EXISTS data_solicitacao DATE AFTER data_concessao;`);
         await connection.query(`ALTER TABLE beneficiarios ADD COLUMN IF NOT EXISTS data_revisao DATE AFTER data_solicitacao;`);
-      } catch (alterErr) {
-        // Se a versão do MySQL não suportar IF NOT EXISTS em ALTER, tenta comandos individuais protegidos
+      } catch {
         try { await connection.query(`ALTER TABLE beneficiarios ADD COLUMN rpa VARCHAR(20);`); } catch {}
         try { await connection.query(`ALTER TABLE beneficiarios ADD COLUMN data_solicitacao DATE;`); } catch {}
         try { await connection.query(`ALTER TABLE beneficiarios ADD COLUMN data_revisao DATE;`); } catch {}
       }
 
-      // 7. Tabela indicadores
+      // 7. Tabela paineis (para relacionamento com a tabela genérica de indicadores)
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS paineis (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          nome VARCHAR(160) NOT NULL,
+          descricao VARCHAR(255),
+          data_criacao TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          data_atualizacao TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      `);
+
+      // 8. Tabela generica indicadores (conforme modelo oficial: id, nome, descricao, unidade, fonte, painelId, valor)
+      try {
+        // Verifica se a tabela antiga continha a coluna 'mes_referencia' e a recria para o padrão genérico correto
+        const [cols]: any = await connection.query(`SHOW COLUMNS FROM indicadores LIKE 'unidade'`);
+        if (!cols || cols.length === 0) {
+          await connection.query(`DROP TABLE IF EXISTS indicadores;`);
+        }
+      } catch {
+        // Tabela ainda não existe
+      }
+
       await connection.query(`
         CREATE TABLE IF NOT EXISTS indicadores (
           id INT AUTO_INCREMENT PRIMARY KEY,
-          mes_referencia VARCHAR(20) NOT NULL,
-          total_beneficiarios INT NOT NULL,
-          num_idosos INT NOT NULL,
-          num_pcd INT NOT NULL,
-          num_ativos INT NOT NULL DEFAULT 0,
-          num_inativos INT NOT NULL DEFAULT 0,
-          valor_total_repassado DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
-          taxa_idosos DECIMAL(5, 2) DEFAULT 0.00,
-          taxa_pcd DECIMAL(5, 2) DEFAULT 0.00,
-          bairro_destaque VARCHAR(100),
-          data_calculo TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          nome VARCHAR(160) NOT NULL,
+          descricao VARCHAR(255),
+          unidade VARCHAR(60) NOT NULL,
+          fonte VARCHAR(255) NOT NULL,
+          painelId INT NOT NULL,
+          valor DECIMAL(15, 2) DEFAULT 0.00,
           data_criacao TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          data_atualizacao TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+          data_atualizacao TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          CONSTRAINT fk_indicadores_painel FOREIGN KEY (painelId) REFERENCES paineis (id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
       `);
 

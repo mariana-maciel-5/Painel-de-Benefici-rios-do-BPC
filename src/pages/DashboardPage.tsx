@@ -10,9 +10,8 @@ import { PapelListTable } from '../features/papeis/components/PapelListTable';
 import { BeneficiarioListTable } from '../features/beneficiarios/components/BeneficiarioListTable';
 import { BeneficiarioStatsCards } from '../features/beneficiarios/components/BeneficiarioStatsCards';
 import { BeneficiarioModal } from '../features/beneficiarios/components/BeneficiarioModal';
-import { IndicadoresSummaryCards } from '../features/indicadores/components/IndicadoresSummaryCards';
-import { IndicadoresDistributionPanel } from '../features/indicadores/components/IndicadoresDistributionPanel';
-import { IndicadoresHistoryTable } from '../features/indicadores/components/IndicadoresHistoryTable';
+import { IndicadoresTable } from '../features/indicadores/components/IndicadoresTable';
+import { NovoIndicadorModal } from '../features/indicadores/components/NovoIndicadorModal';
 import { useUsuarios } from '../features/usuarios/hooks/useUsuarios';
 import { usePapeis } from '../features/papeis/hooks/usePapeis';
 import { useBeneficiarios } from '../features/beneficiarios/hooks/useBeneficiarios';
@@ -23,6 +22,7 @@ import { useAuthContext } from '../hooks/useAuthContext';
 export function DashboardPage() {
   const [activeTab, setActiveTab] = useState<DashboardTabType>('beneficiarios');
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [isNovoIndicadorOpen, setIsNovoIndicadorOpen] = useState<boolean>(false);
   const [tokenCopied, setTokenCopied] = useState<boolean>(false);
 
   const { token, currentUser } = useAuthContext();
@@ -53,11 +53,16 @@ export function DashboardPage() {
 
   const {
     indicadores,
-    indicadorAtual,
+    totalCount: totalIndicadores,
+    paineis,
     loading: indicadoresLoading,
-    recalculando: recalculandoIndicadores,
+    sincronizando: sincronizandoIndicadores,
+    searchTerm: searchIndicadores,
+    setSearchTerm: setSearchIndicadores,
     refetch: refetchIndicadores,
-    recalcular: recalcularIndicadores,
+    cadastrar: cadastrarIndicador,
+    excluir: excluirIndicador,
+    sincronizar: sincronizarIndicadores,
   } = useIndicadores();
 
   const {
@@ -147,7 +152,7 @@ export function DashboardPage() {
         </div>
       )}
 
-      {/* 2. ABA DA NOVA ENTIDADE INDICADORES */}
+      {/* 2. ABA DA NOVA ENTIDADE INDICADORES (GENÉRICA) */}
       {activeTab === 'indicadores' && (
         <div className="space-y-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -157,30 +162,33 @@ export function DashboardPage() {
                   <TrendingUp className="w-5 h-5" />
                 </span>
                 <h2 className="text-xl font-bold text-slate-800 tracking-tight">
-                  Painel de Indicadores do BPC Recife
+                  Entidade Indicadores (Tabela Genérica)
                 </h2>
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                Métricas consolidadas na entidade <code className="bg-slate-100 px-1 py-0.5 rounded text-blue-700 font-mono">indicadores</code>: Total de Beneficiários, Nº de Idosos e Nº de PCDs
+                Catálogo relacional genérico: <code className="bg-slate-100 px-1 py-0.5 rounded text-blue-700 font-mono">id</code>, <code className="bg-slate-100 px-1 py-0.5 rounded text-blue-700 font-mono">nome</code>, <code className="bg-slate-100 px-1 py-0.5 rounded text-blue-700 font-mono">descricao</code>, <code className="bg-slate-100 px-1 py-0.5 rounded text-blue-700 font-mono">unidade</code>, <code className="bg-slate-100 px-1 py-0.5 rounded text-blue-700 font-mono">fonte</code> e <code className="bg-slate-100 px-1 py-0.5 rounded text-blue-700 font-mono">painelId</code>. Os indicadores são as linhas da tabela.
               </p>
             </div>
           </div>
 
-          {/* Cards de Métricas Principais Solicitadas */}
-          <IndicadoresSummaryCards indicador={indicadorAtual} />
-
-          {/* Painel de Distribuição (Idosos vs PCD, Ativos vs Inativos e Ação de Recalcular) */}
-          <IndicadoresDistributionPanel
-            indicador={indicadorAtual}
-            onRecalcular={recalcularIndicadores}
-            recalculando={recalculandoIndicadores}
+          <IndicadoresTable
+            indicadores={indicadores}
+            totalCount={totalIndicadores}
+            loading={indicadoresLoading}
+            sincronizando={sincronizandoIndicadores}
+            searchTerm={searchIndicadores}
+            setSearchTerm={setSearchIndicadores}
+            onRefresh={refetchIndicadores}
+            onOpenNovoModal={() => setIsNovoIndicadorOpen(true)}
+            onSincronizar={sincronizarIndicadores}
+            onExcluir={excluirIndicador}
           />
 
-          {/* Tabela de Série Histórica da Entidade Indicadores */}
-          <IndicadoresHistoryTable
-            indicadores={indicadores}
-            loading={indicadoresLoading}
-            onRefresh={refetchIndicadores}
+          <NovoIndicadorModal
+            isOpen={isNovoIndicadorOpen}
+            paineis={paineis}
+            onClose={() => setIsNovoIndicadorOpen(false)}
+            onSubmit={cadastrarIndicador}
           />
         </div>
       )}

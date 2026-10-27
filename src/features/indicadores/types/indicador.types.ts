@@ -1,17 +1,13 @@
 export interface IndicadorItem {
   id: number;
-  mes_referencia: string;
-  total_beneficiarios: number;
-  num_idosos: number;
-  num_pcd: number;
-  num_ativos: number;
-  num_inativos: number;
-  valor_total_repassado: number | string;
-  taxa_idosos?: number | string;
-  taxa_pcd?: number | string;
-  bairro_destaque?: string | null;
-  data_calculo: string;
+  nome: string;
+  descricao?: string | null;
+  unidade: string;
+  fonte: string;
+  painelId: number;
+  valor?: number | string;
   data_criacao?: string;
+  data_atualizacao?: string;
 }
 
 export interface IndicadoresResponse {
@@ -20,14 +16,23 @@ export interface IndicadoresResponse {
   message?: string;
 }
 
-export interface IndicadorAtualResponse {
+export interface PainelItem {
+  id: number;
+  nome: string;
+  descricao?: string | null;
+}
+
+export interface PaineisResponse {
   success: boolean;
-  data: IndicadorItem;
+  data: PainelItem[];
   message?: string;
 }
 
-export interface RecalcularResponse {
-  success: boolean;
-  message: string;
-  indicador: IndicadorItem;
+export interface NovoIndicadorPayload {
+  nome: string;
+  descricao?: string;
+  unidade: string;
+  fonte: string;
+  painelId: number;
+  valor?: number;
 }

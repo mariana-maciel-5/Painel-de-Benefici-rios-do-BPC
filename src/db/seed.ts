@@ -269,89 +269,96 @@ export async function runSeed() {
       );
     }
 
-    // 7. Entidade Indicadores (Série Histórica e Atual)
+    // 7. Entidade Painéis
+    const paineisData = [
+      { id: 1, nome: 'Painel Geral do BPC Recife', descricao: 'Monitoramento da Assistência Social e Concessões BPC' },
+    ];
+
+    for (const p of paineisData) {
+      await connection.query(
+        `INSERT INTO paineis (id, nome, descricao) VALUES (?, ?, ?)
+         ON DUPLICATE KEY UPDATE nome = VALUES(nome), descricao = VALUES(descricao)`,
+        [p.id, p.nome, p.descricao]
+      );
+    }
+
+    // 8. Entidade Genérica Indicadores (Linhas da Tabela conforme especificação oficial)
     const indicadoresData = [
       {
         id: 1,
-        mes_referencia: 'Julho/2026',
-        total_beneficiarios: 1420,
-        num_idosos: 890,
-        num_pcd: 530,
-        num_ativos: 1380,
-        num_inativos: 40,
-        valor_total_repassado: 2005040.00,
-        taxa_idosos: 62.68,
-        taxa_pcd: 37.32,
-        bairro_destaque: 'Casa Amarela',
+        nome: 'Total de beneficiários do BPC',
+        descricao: 'Quantidade total de beneficiários',
+        unidade: 'beneficiários',
+        fonte: 'Ministério do Desenvolvimento Social - https://www.gov.br/mds',
+        painelId: 1,
+        valor: 1520.00,
       },
       {
         id: 2,
-        mes_referencia: 'Agosto/2026',
-        total_beneficiarios: 1465,
-        num_idosos: 915,
-        num_pcd: 550,
-        num_ativos: 1425,
-        num_inativos: 40,
-        valor_total_repassado: 2068580.00,
-        taxa_idosos: 62.46,
-        taxa_pcd: 37.54,
-        bairro_destaque: 'Santo Amaro',
+        nome: 'Número de idosos',
+        descricao: 'Beneficiários do BPC com idade igual ou superior a 65 anos',
+        unidade: 'idosos',
+        fonte: 'Secretaria de Assistência Social do Recife - SAS',
+        painelId: 1,
+        valor: 950.00,
       },
       {
         id: 3,
-        mes_referencia: 'Setembro/2026',
-        total_beneficiarios: 1490,
-        num_idosos: 930,
-        num_pcd: 560,
-        num_ativos: 1450,
-        num_inativos: 40,
-        valor_total_repassado: 2103880.00,
-        taxa_idosos: 62.42,
-        taxa_pcd: 37.58,
-        bairro_destaque: 'Ibura',
+        nome: 'Número de pessoas com deficiência',
+        descricao: 'Beneficiários do BPC com deficiência de longo prazo comprovada (PCD)',
+        unidade: 'pessoas com deficiência',
+        fonte: 'Secretaria de Assistência Social do Recife - SAS',
+        painelId: 1,
+        valor: 570.00,
       },
       {
         id: 4,
-        mes_referencia: 'Outubro/2026',
-        total_beneficiarios: 1520,
-        num_idosos: 950,
-        num_pcd: 570,
-        num_ativos: 1480,
-        num_inativos: 40,
-        valor_total_repassado: 2146240.00,
-        taxa_idosos: 62.50,
-        taxa_pcd: 37.50,
-        bairro_destaque: 'Várzea',
+        nome: 'Número de benefícios ativos',
+        descricao: 'Benefícios regulares com pagamento em dia',
+        unidade: 'benefícios',
+        fonte: 'Base Municipal do CadÚnico / Recife',
+        painelId: 1,
+        valor: 1480.00,
+      },
+      {
+        id: 5,
+        nome: 'Número de benefícios inativos',
+        descricao: 'Benefícios temporariamente suspensos para averiguação cadastral',
+        unidade: 'benefícios',
+        fonte: 'Coordenação Municipal do BPC Recife',
+        painelId: 1,
+        valor: 40.00,
+      },
+      {
+        id: 6,
+        nome: 'Valor total mensal repassado',
+        descricao: 'Montante mensal transferido aos beneficiários do município',
+        unidade: 'reais / mês',
+        fonte: 'Fundo Nacional de Assistência Social - FNAS',
+        painelId: 1,
+        valor: 2146240.00,
       },
     ];
 
     for (const ind of indicadoresData) {
       await connection.query(
-        `INSERT INTO indicadores (id, mes_referencia, total_beneficiarios, num_idosos, num_pcd, num_ativos, num_inativos, valor_total_repassado, taxa_idosos, taxa_pcd, bairro_destaque)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO indicadores (id, nome, descricao, unidade, fonte, painelId, valor)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
          ON DUPLICATE KEY UPDATE
-           mes_referencia = VALUES(mes_referencia),
-           total_beneficiarios = VALUES(total_beneficiarios),
-           num_idosos = VALUES(num_idosos),
-           num_pcd = VALUES(num_pcd),
-           num_ativos = VALUES(num_ativos),
-           num_inativos = VALUES(num_inativos),
-           valor_total_repassado = VALUES(valor_total_repassado),
-           taxa_idosos = VALUES(taxa_idosos),
-           taxa_pcd = VALUES(taxa_pcd),
-           bairro_destaque = VALUES(bairro_destaque)`,
+           nome = VALUES(nome),
+           descricao = VALUES(descricao),
+           unidade = VALUES(unidade),
+           fonte = VALUES(fonte),
+           painelId = VALUES(painelId),
+           valor = VALUES(valor)`,
         [
           ind.id,
-          ind.mes_referencia,
-          ind.total_beneficiarios,
-          ind.num_idosos,
-          ind.num_pcd,
-          ind.num_ativos,
-          ind.num_inativos,
-          ind.valor_total_repassado,
-          ind.taxa_idosos,
-          ind.taxa_pcd,
-          ind.bairro_destaque,
+          ind.nome,
+          ind.descricao,
+          ind.unidade,
+          ind.fonte,
+          ind.painelId,
+          ind.valor,
         ]
       );
     }

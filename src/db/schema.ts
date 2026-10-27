@@ -57,19 +57,22 @@ export const beneficiarios = mysqlTable('beneficiarios', {
   data_atualizacao: timestamp('data_atualizacao').defaultNow().onUpdateNow().notNull(),
 });
 
+export const paineis = mysqlTable('paineis', {
+  id: int('id').primaryKey().autoincrement(),
+  nome: varchar('nome', { length: 160 }).notNull(),
+  descricao: varchar('descricao', { length: 255 }),
+  data_criacao: timestamp('data_criacao').defaultNow().notNull(),
+  data_atualizacao: timestamp('data_atualizacao').defaultNow().onUpdateNow().notNull(),
+});
+
 export const indicadores = mysqlTable('indicadores', {
   id: int('id').primaryKey().autoincrement(),
-  mes_referencia: varchar('mes_referencia', { length: 20 }).notNull(),
-  total_beneficiarios: int('total_beneficiarios').notNull(),
-  num_idosos: int('num_idosos').notNull(),
-  num_pcd: int('num_pcd').notNull(),
-  num_ativos: int('num_ativos').notNull().default(0),
-  num_inativos: int('num_inativos').notNull().default(0),
-  valor_total_repassado: decimal('valor_total_repassado', { precision: 12, scale: 2 }).notNull().default('0.00'),
-  taxa_idosos: decimal('taxa_idosos', { precision: 5, scale: 2 }).default('0.00'),
-  taxa_pcd: decimal('taxa_pcd', { precision: 5, scale: 2 }).default('0.00'),
-  bairro_destaque: varchar('bairro_destaque', { length: 100 }),
-  data_calculo: timestamp('data_calculo').defaultNow().notNull(),
+  nome: varchar('nome', { length: 160 }).notNull(),
+  descricao: varchar('descricao', { length: 255 }),
+  unidade: varchar('unidade', { length: 60 }).notNull(),
+  fonte: varchar('fonte', { length: 255 }).notNull(),
+  painelId: int('painelId').notNull().references(() => paineis.id),
+  valor: decimal('valor', { precision: 15, scale: 2 }).default('0.00'),
   data_criacao: timestamp('data_criacao').defaultNow().notNull(),
   data_atualizacao: timestamp('data_atualizacao').defaultNow().onUpdateNow().notNull(),
 });

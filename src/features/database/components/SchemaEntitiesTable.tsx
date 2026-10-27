@@ -3,7 +3,12 @@ import type { SchemaEntity } from '../types/database.types';
 const SCHEMA_ENTITIES: SchemaEntity[] = [
   {
     tabela: 'indicadores',
-    colunas: 'id, mes_referencia, total_beneficiarios, num_idosos, num_pcd, num_ativos, num_inativos, valor_total_repassado, taxa_idosos, taxa_pcd, bairro_destaque, data_calculo, data_criacao, data_atualizacao',
+    colunas: 'id, nome, descricao, unidade, fonte, painelId, valor, data_criacao, data_atualizacao',
+    chave: 'PRIMARY KEY (id) + FK(painelId -> paineis.id)',
+  },
+  {
+    tabela: 'paineis',
+    colunas: 'id, nome, descricao, data_criacao, data_atualizacao',
     chave: 'PRIMARY KEY (id)',
   },
   {
@@ -42,7 +47,7 @@ export function SchemaEntitiesTable() {
   return (
     <div className="space-y-4">
       <p className="text-xs text-slate-500">
-        7 entidades relacionais configuradas em{' '}
+        8 entidades relacionais configuradas em{' '}
         <code className="font-mono bg-slate-100 px-1 py-0.5 rounded text-blue-700">
           src/db/schema.ts
         </code>{' '}

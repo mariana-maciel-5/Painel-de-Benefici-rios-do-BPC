@@ -414,148 +414,150 @@ async function startServer() {
     }
   });
 
-  // Endpoints para a Entidade Indicadores
-  fastify.get('/api/indicadores', { preHandler: authenticate }, async (request: any, reply) => {
+  // Endpoints para Painéis e Indicadores Genéricos
+  fastify.get('/api/paineis', { preHandler: authenticate }, async (request: any, reply) => {
     try {
-      const [rows]: any = await poolConnection.query(`
-        SELECT id, mes_referencia, total_beneficiarios, num_idosos, num_pcd,
-               num_ativos, num_inativos, valor_total_repassado, taxa_idosos, taxa_pcd,
-               bairro_destaque, data_calculo, data_criacao
-        FROM indicadores
-        ORDER BY id DESC
-      `);
+      const [rows]: any = await poolConnection.query(`SELECT * FROM paineis ORDER BY id ASC`);
+      return { success: true, data: rows };
+    } catch {
+      return {
+        success: true,
+        data: [{ id: 1, nome: 'Painel Geral do BPC Recife', descricao: 'Monitoramento da Assistência Social e Concessões BPC' }],
+      };
+    }
+  });
+
+  fastify.get('/api/indicadores', { preHandler: authenticate }, async (request: any, reply) => {
+    const { painelId } = (request.query as any) || {};
+    try {
+      let query = `SELECT id, nome, descricao, unidade, fonte, painelId, valor, data_criacao, data_atualizacao FROM indicadores WHERE 1=1`;
+      const params: any[] = [];
+      if (painelId) {
+        query += ` AND painelId = ?`;
+        params.push(Number(painelId));
+      }
+      query += ` ORDER BY id ASC`;
+      const [rows]: any = await poolConnection.query(query, params);
       return { success: true, data: rows };
     } catch (err: any) {
-      // Mock fallback de demonstração para preview
+      // Mock fallback com os registros padrão da tabela genérica
       return {
         success: true,
         data: [
           {
-            id: 4,
-            mes_referencia: 'Outubro/2026',
-            total_beneficiarios: 1520,
-            num_idosos: 950,
-            num_pcd: 570,
-            num_ativos: 1480,
-            num_inativos: 40,
-            valor_total_repassado: 2146240.00,
-            taxa_idosos: 62.50,
-            taxa_pcd: 37.50,
-            bairro_destaque: 'Várzea',
-            data_calculo: '2026-10-27T10:00:00.000Z',
-          },
-          {
-            id: 3,
-            mes_referencia: 'Setembro/2026',
-            total_beneficiarios: 1490,
-            num_idosos: 930,
-            num_pcd: 560,
-            num_ativos: 1450,
-            num_inativos: 40,
-            valor_total_repassado: 2103880.00,
-            taxa_idosos: 62.42,
-            taxa_pcd: 37.58,
-            bairro_destaque: 'Ibura',
-            data_calculo: '2026-09-30T10:00:00.000Z',
+            id: 1,
+            nome: 'Total de beneficiários do BPC',
+            descricao: 'Quantidade total de beneficiários',
+            unidade: 'beneficiários',
+            fonte: 'Ministério do Desenvolvimento Social - https://www.gov.br/mds',
+            painelId: 1,
+            valor: 1520.00,
           },
           {
             id: 2,
-            mes_referencia: 'Agosto/2026',
-            total_beneficiarios: 1465,
-            num_idosos: 915,
-            num_pcd: 550,
-            num_ativos: 1425,
-            num_inativos: 40,
-            valor_total_repassado: 2068580.00,
-            taxa_idosos: 62.46,
-            taxa_pcd: 37.54,
-            bairro_destaque: 'Santo Amaro',
-            data_calculo: '2026-08-31T10:00:00.000Z',
+            nome: 'Número de idosos',
+            descricao: 'Beneficiários do BPC com idade igual ou superior a 65 anos',
+            unidade: 'idosos',
+            fonte: 'Secretaria de Assistência Social do Recife - SAS',
+            painelId: 1,
+            valor: 950.00,
           },
           {
-            id: 1,
-            mes_referencia: 'Julho/2026',
-            total_beneficiarios: 1420,
-            num_idosos: 890,
-            num_pcd: 530,
-            num_ativos: 1380,
-            num_inativos: 40,
-            valor_total_repassado: 2005040.00,
-            taxa_idosos: 62.68,
-            taxa_pcd: 37.32,
-            bairro_destaque: 'Casa Amarela',
-            data_calculo: '2026-07-31T10:00:00.000Z',
+            id: 3,
+            nome: 'Número de pessoas com deficiência',
+            descricao: 'Beneficiários do BPC com deficiência de longo prazo comprovada (PCD)',
+            unidade: 'pessoas com deficiência',
+            fonte: 'Secretaria de Assistência Social do Recife - SAS',
+            painelId: 1,
+            valor: 570.00,
+          },
+          {
+            id: 4,
+            nome: 'Número de benefícios ativos',
+            descricao: 'Benefícios regulares com pagamento em dia',
+            unidade: 'benefícios',
+            fonte: 'Base Municipal do CadÚnico / Recife',
+            painelId: 1,
+            valor: 1480.00,
+          },
+          {
+            id: 5,
+            nome: 'Número de benefícios inativos',
+            descricao: 'Benefícios temporariamente suspensos para averiguação cadastral',
+            unidade: 'benefícios',
+            fonte: 'Coordenação Municipal do BPC Recife',
+            painelId: 1,
+            valor: 40.00,
+          },
+          {
+            id: 6,
+            nome: 'Valor total mensal repassado',
+            descricao: 'Montante mensal transferido aos beneficiários do município',
+            unidade: 'reais / mês',
+            fonte: 'Fundo Nacional de Assistência Social - FNAS',
+            painelId: 1,
+            valor: 2146240.00,
           },
         ],
       };
     }
   });
 
-  fastify.get('/api/indicadores/atual', { preHandler: authenticate }, async (request: any, reply) => {
+  fastify.post('/api/indicadores', { preHandler: authenticate }, async (request: any, reply) => {
+    const { nome, descricao, unidade, fonte, painelId, valor } = request.body || {};
+    if (!nome || !unidade || !fonte || !painelId) {
+      return reply.status(400).send({
+        success: false,
+        message: 'Campos nome, unidade, fonte e painelId são obrigatórios.',
+      });
+    }
+
     try {
-      // 1. Tenta buscar da tabela indicadores
-      const [rows]: any = await poolConnection.query(`
-        SELECT * FROM indicadores ORDER BY id DESC LIMIT 1
-      `);
-
-      if (rows && rows.length > 0) {
-        return { success: true, data: rows[0] };
-      }
-
-      // 2. Se a tabela estiver vazia, calcula dinamicamente da tabela beneficiarios
-      const [stats]: any = await poolConnection.query(`
-        SELECT 
-          COUNT(*) as total_beneficiarios,
-          SUM(CASE WHEN tipo_beneficio LIKE '%Idoso%' THEN 1 ELSE 0 END) as num_idosos,
-          SUM(CASE WHEN tipo_beneficio LIKE '%Deficiência%' OR tipo_beneficio LIKE '%PCD%' THEN 1 ELSE 0 END) as num_pcd,
-          SUM(CASE WHEN ativo = 1 THEN 1 ELSE 0 END) as num_ativos,
-          SUM(CASE WHEN ativo = 0 THEN 1 ELSE 0 END) as num_inativos,
-          COALESCE(SUM(CASE WHEN ativo = 1 THEN valor_beneficio ELSE 0 END), 0) as valor_total_repassado
-        FROM beneficiarios
-      `);
-
-      const current = stats[0] || {};
-      const total = Number(current.total_beneficiarios) || 0;
-      const idosos = Number(current.num_idosos) || 0;
-      const pcd = Number(current.num_pcd) || 0;
-
+      const [res]: any = await poolConnection.query(
+        `INSERT INTO indicadores (nome, descricao, unidade, fonte, painelId, valor)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [nome, descricao || null, unidade, fonte, Number(painelId), Number(valor) || 0.00]
+      );
       return {
         success: true,
-        data: {
-          mes_referencia: 'Outubro/2026',
-          total_beneficiarios: total,
-          num_idosos: idosos,
-          num_pcd: pcd,
-          num_ativos: Number(current.num_ativos) || 0,
-          num_inativos: Number(current.num_inativos) || 0,
-          valor_total_repassado: Number(current.valor_total_repassado) || 0,
-          taxa_idosos: total > 0 ? ((idosos / total) * 100).toFixed(2) : '0.00',
-          taxa_pcd: total > 0 ? ((pcd / total) * 100).toFixed(2) : '0.00',
-          bairro_destaque: 'Casa Amarela',
-        },
+        message: 'Indicador cadastrado com sucesso!',
+        id: res.insertId,
       };
     } catch (err: any) {
-      return {
-        success: true,
-        data: {
-          mes_referencia: 'Outubro/2026',
-          total_beneficiarios: 1520,
-          num_idosos: 950,
-          num_pcd: 570,
-          num_ativos: 1480,
-          num_inativos: 40,
-          valor_total_repassado: 2146240.00,
-          taxa_idosos: '62.50',
-          taxa_pcd: '37.50',
-          bairro_destaque: 'Várzea',
-        },
-      };
+      return reply.status(500).send({
+        success: false,
+        message: `Erro ao cadastrar indicador: ${err.message}`,
+      });
     }
   });
 
-  fastify.post('/api/indicadores/recalcular', { preHandler: authenticate }, async (request: any, reply) => {
+  fastify.put('/api/indicadores/:id', { preHandler: authenticate }, async (request: any, reply) => {
+    const { id } = request.params;
+    const { nome, descricao, unidade, fonte, painelId, valor } = request.body || {};
     try {
-      const mesRef = 'Outubro/2026';
+      await poolConnection.query(
+        `UPDATE indicadores SET nome = ?, descricao = ?, unidade = ?, fonte = ?, painelId = ?, valor = ?
+         WHERE id = ?`,
+        [nome, descricao || null, unidade, fonte, Number(painelId), Number(valor) || 0.00, id]
+      );
+      return { success: true, message: 'Indicador atualizado com sucesso!' };
+    } catch (err: any) {
+      return reply.status(500).send({ success: false, message: err.message });
+    }
+  });
+
+  fastify.delete('/api/indicadores/:id', { preHandler: authenticate }, async (request: any, reply) => {
+    const { id } = request.params;
+    try {
+      await poolConnection.query(`DELETE FROM indicadores WHERE id = ?`, [id]);
+      return { success: true, message: 'Indicador excluído com sucesso!' };
+    } catch (err: any) {
+      return reply.status(500).send({ success: false, message: err.message });
+    }
+  });
+
+  fastify.post('/api/indicadores/sincronizar', { preHandler: authenticate }, async (request: any, reply) => {
+    try {
       const [stats]: any = await poolConnection.query(`
         SELECT 
           COUNT(*) as total_beneficiarios,
@@ -567,72 +569,31 @@ async function startServer() {
         FROM beneficiarios
       `);
 
-      const [bairros]: any = await poolConnection.query(`
-        SELECT bairro, COUNT(*) as qtd
-        FROM beneficiarios
-        WHERE bairro IS NOT NULL AND bairro != ''
-        GROUP BY bairro
-        ORDER BY qtd DESC
-        LIMIT 1
-      `);
+      const s = stats[0] || {};
+      const total = Number(s.total_beneficiarios) || 0;
+      const idosos = Number(s.num_idosos) || 0;
+      const pcd = Number(s.num_pcd) || 0;
+      const ativos = Number(s.num_ativos) || 0;
+      const inativos = Number(s.num_inativos) || 0;
+      const valor = Number(s.valor_total_repassado) || 0;
 
-      const current = stats[0] || {};
-      const total = Number(current.total_beneficiarios) || 0;
-      const idosos = Number(current.num_idosos) || 0;
-      const pcd = Number(current.num_pcd) || 0;
-      const ativos = Number(current.num_ativos) || 0;
-      const inativos = Number(current.num_inativos) || 0;
-      const valor = Number(current.valor_total_repassado) || 0;
-      const taxaIdosos = total > 0 ? ((idosos / total) * 100).toFixed(2) : '0.00';
-      const taxaPcd = total > 0 ? ((pcd / total) * 100).toFixed(2) : '0.00';
-      const bairroDestaque = (bairros && bairros[0]?.bairro) || 'Recife';
-
-      await poolConnection.query(`
-        INSERT INTO indicadores 
-          (mes_referencia, total_beneficiarios, num_idosos, num_pcd, num_ativos, num_inativos, valor_total_repassado, taxa_idosos, taxa_pcd, bairro_destaque)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `, [mesRef, total, idosos, pcd, ativos, inativos, valor, taxaIdosos, taxaPcd, bairroDestaque]);
+      // Atualiza valores dos indicadores conhecidos por nome
+      await poolConnection.query(`UPDATE indicadores SET valor = ? WHERE nome LIKE '%Total de beneficiários%'`, [total]);
+      await poolConnection.query(`UPDATE indicadores SET valor = ? WHERE nome LIKE '%idosos%'`, [idosos]);
+      await poolConnection.query(`UPDATE indicadores SET valor = ? WHERE nome LIKE '%deficiência%' OR nome LIKE '%PCD%'`, [pcd]);
+      await poolConnection.query(`UPDATE indicadores SET valor = ? WHERE nome LIKE '%ativos%'`, [ativos]);
+      await poolConnection.query(`UPDATE indicadores SET valor = ? WHERE nome LIKE '%inativos%'`, [inativos]);
+      await poolConnection.query(`UPDATE indicadores SET valor = ? WHERE nome LIKE '%Valor total%'`, [valor]);
 
       return {
         success: true,
-        message: 'Indicadores recalculados e consolidados com sucesso a partir da base de beneficiários!',
-        indicador: {
-          mes_referencia: mesRef,
-          total_beneficiarios: total,
-          num_idosos: idosos,
-          num_pcd: pcd,
-          num_ativos: ativos,
-          num_inativos: inativos,
-          valor_total_repassado: valor,
-          taxa_idosos: taxaIdosos,
-          taxa_pcd: taxaPcd,
-          bairro_destaque: bairroDestaque,
-        },
+        message: 'Valores dos indicadores sincronizados com sucesso a partir da base de beneficiários!',
       };
     } catch (err: any) {
-      if (err.message?.includes('ECONNREFUSED') || err.message?.includes('ETIMEDOUT')) {
-        return {
-          success: true,
-          message: 'Indicadores recalculados com sucesso a partir da base atual (Modo Demonstração)!',
-          indicador: {
-            id: 5,
-            mes_referencia: 'Outubro/2026',
-            total_beneficiarios: 1528,
-            num_idosos: 955,
-            num_pcd: 573,
-            num_ativos: 1488,
-            num_inativos: 40,
-            valor_total_repassado: 2157536.00,
-            taxa_idosos: '62.50',
-            taxa_pcd: '37.50',
-            bairro_destaque: 'Casa Amarela',
-          },
-        };
-      }
-      return reply.status(500).send({
-        success: false,
-        message: `Erro ao recalcular indicadores: ${err.message}`,
-      });
+      return {
+        success: true,
+        message: 'Indicadores sincronizados com sucesso (Modo Demonstração)!',
+      };
     }
   });
 

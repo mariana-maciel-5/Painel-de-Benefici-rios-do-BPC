@@ -82,7 +82,7 @@ export async function initDatabase() {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
       `);
 
-      // 6. Tabela beneficiarios
+      // 6. Tabela beneficiarios (com suporte a filtros de bairro e período)
       await connection.query(`
         CREATE TABLE IF NOT EXISTS beneficiarios (
           id INT AUTO_INCREMENT PRIMARY KEY,
@@ -91,9 +91,46 @@ export async function initDatabase() {
           nis VARCHAR(11),
           valor_beneficio DECIMAL(10, 2) NOT NULL,
           data_concessao DATE NOT NULL,
+          data_solicitacao DATE,
+          data_revisao DATE,
           ativo BOOLEAN NOT NULL DEFAULT TRUE,
           tipo_beneficio VARCHAR(50) NOT NULL DEFAULT 'Idoso',
-          bairro VARCHAR(100),
+          bairro VARCHAR(100) NOT NULL DEFAULT 'Recife',
+          rpa VARCHAR(20),
+          data_criacao TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          data_atualizacao TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          INDEX idx_bairro (bairro),
+          INDEX idx_data_concessao (data_concessao)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      `);
+
+      // Migração suave de colunas para tabelas beneficiarios criadas anteriormente
+      try {
+        await connection.query(`ALTER TABLE beneficiarios ADD COLUMN IF NOT EXISTS rpa VARCHAR(20) AFTER bairro;`);
+        await connection.query(`ALTER TABLE beneficiarios ADD COLUMN IF NOT EXISTS data_solicitacao DATE AFTER data_concessao;`);
+        await connection.query(`ALTER TABLE beneficiarios ADD COLUMN IF NOT EXISTS data_revisao DATE AFTER data_solicitacao;`);
+      } catch (alterErr) {
+        // Se a versão do MySQL não suportar IF NOT EXISTS em ALTER, tenta comandos individuais protegidos
+        try { await connection.query(`ALTER TABLE beneficiarios ADD COLUMN rpa VARCHAR(20);`); } catch {}
+        try { await connection.query(`ALTER TABLE beneficiarios ADD COLUMN data_solicitacao DATE;`); } catch {}
+        try { await connection.query(`ALTER TABLE beneficiarios ADD COLUMN data_revisao DATE;`); } catch {}
+      }
+
+      // 7. Tabela indicadores
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS indicadores (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          mes_referencia VARCHAR(20) NOT NULL,
+          total_beneficiarios INT NOT NULL,
+          num_idosos INT NOT NULL,
+          num_pcd INT NOT NULL,
+          num_ativos INT NOT NULL DEFAULT 0,
+          num_inativos INT NOT NULL DEFAULT 0,
+          valor_total_repassado DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+          taxa_idosos DECIMAL(5, 2) DEFAULT 0.00,
+          taxa_pcd DECIMAL(5, 2) DEFAULT 0.00,
+          bairro_destaque VARCHAR(100),
+          data_calculo TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
           data_criacao TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
           data_atualizacao TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

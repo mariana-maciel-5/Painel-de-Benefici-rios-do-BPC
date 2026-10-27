@@ -142,9 +142,12 @@ export async function runSeed() {
         nis: '10987654321',
         valor_beneficio: 1412.00,
         data_concessao: '2021-03-15',
+        data_solicitacao: '2021-01-10',
+        data_revisao: '2023-03-15',
         ativo: true,
         tipo_beneficio: 'Idoso (65+ anos)',
         bairro: 'Casa Amarela',
+        rpa: 'RPA 3',
       },
       {
         id: 2,
@@ -153,9 +156,12 @@ export async function runSeed() {
         nis: '20987654322',
         valor_beneficio: 1412.00,
         data_concessao: '2020-08-10',
+        data_solicitacao: '2020-05-12',
+        data_revisao: '2022-08-10',
         ativo: true,
         tipo_beneficio: 'Pessoa com Deficiência (PCD)',
         bairro: 'Santo Amaro',
+        rpa: 'RPA 1',
       },
       {
         id: 3,
@@ -164,9 +170,12 @@ export async function runSeed() {
         nis: '30987654323',
         valor_beneficio: 1412.00,
         data_concessao: '2019-11-20',
+        data_solicitacao: '2019-09-01',
+        data_revisao: '2021-11-20',
         ativo: true,
         tipo_beneficio: 'Idoso (65+ anos)',
         bairro: 'Várzea',
+        rpa: 'RPA 4',
       },
       {
         id: 4,
@@ -175,9 +184,12 @@ export async function runSeed() {
         nis: '40987654324',
         valor_beneficio: 1412.00,
         data_concessao: '2022-01-05',
+        data_solicitacao: '2021-10-15',
+        data_revisao: '2024-01-05',
         ativo: true,
         tipo_beneficio: 'Pessoa com Deficiência (PCD)',
         bairro: 'Ibura',
+        rpa: 'RPA 6',
       },
       {
         id: 5,
@@ -186,9 +198,12 @@ export async function runSeed() {
         nis: '50987654325',
         valor_beneficio: 1412.00,
         data_concessao: '2018-05-18',
+        data_solicitacao: '2018-02-14',
+        data_revisao: '2020-05-18',
         ativo: false,
         tipo_beneficio: 'Idoso (65+ anos)',
         bairro: 'Boa Viagem',
+        rpa: 'RPA 6',
       },
       {
         id: 6,
@@ -197,9 +212,12 @@ export async function runSeed() {
         nis: '60987654326',
         valor_beneficio: 1412.00,
         data_concessao: '2023-06-22',
+        data_solicitacao: '2023-03-10',
+        data_revisao: '2025-06-22',
         ativo: true,
         tipo_beneficio: 'Pessoa com Deficiência (PCD)',
         bairro: 'Afogados',
+        rpa: 'RPA 5',
       },
       {
         id: 7,
@@ -208,9 +226,12 @@ export async function runSeed() {
         nis: '70987654327',
         valor_beneficio: 1412.00,
         data_concessao: '2021-09-30',
+        data_solicitacao: '2021-06-20',
+        data_revisao: '2023-09-30',
         ativo: true,
         tipo_beneficio: 'Idoso (65+ anos)',
         bairro: 'Pina',
+        rpa: 'RPA 6',
       },
       {
         id: 8,
@@ -219,26 +240,119 @@ export async function runSeed() {
         nis: '80987654328',
         valor_beneficio: 1412.00,
         data_concessao: '2022-12-14',
+        data_solicitacao: '2022-09-05',
+        data_revisao: '2024-12-14',
         ativo: true,
         tipo_beneficio: 'Idoso (65+ anos)',
         bairro: 'Tejipió',
+        rpa: 'RPA 5',
       },
     ];
 
     for (const b of beneficiariosData) {
       await connection.query(
-        `INSERT INTO beneficiarios (id, nome, cpf, nis, valor_beneficio, data_concessao, ativo, tipo_beneficio, bairro)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO beneficiarios (id, nome, cpf, nis, valor_beneficio, data_concessao, data_solicitacao, data_revisao, ativo, tipo_beneficio, bairro, rpa)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON DUPLICATE KEY UPDATE 
            nome = VALUES(nome),
            cpf = VALUES(cpf),
            nis = VALUES(nis),
            valor_beneficio = VALUES(valor_beneficio),
            data_concessao = VALUES(data_concessao),
+           data_solicitacao = VALUES(data_solicitacao),
+           data_revisao = VALUES(data_revisao),
            ativo = VALUES(ativo),
            tipo_beneficio = VALUES(tipo_beneficio),
-           bairro = VALUES(bairro)`,
-        [b.id, b.nome, b.cpf, b.nis, b.valor_beneficio, b.data_concessao, b.ativo, b.tipo_beneficio, b.bairro]
+           bairro = VALUES(bairro),
+           rpa = VALUES(rpa)`,
+        [b.id, b.nome, b.cpf, b.nis, b.valor_beneficio, b.data_concessao, b.data_solicitacao, b.data_revisao, b.ativo, b.tipo_beneficio, b.bairro, b.rpa]
+      );
+    }
+
+    // 7. Entidade Indicadores (Série Histórica e Atual)
+    const indicadoresData = [
+      {
+        id: 1,
+        mes_referencia: 'Julho/2026',
+        total_beneficiarios: 1420,
+        num_idosos: 890,
+        num_pcd: 530,
+        num_ativos: 1380,
+        num_inativos: 40,
+        valor_total_repassado: 2005040.00,
+        taxa_idosos: 62.68,
+        taxa_pcd: 37.32,
+        bairro_destaque: 'Casa Amarela',
+      },
+      {
+        id: 2,
+        mes_referencia: 'Agosto/2026',
+        total_beneficiarios: 1465,
+        num_idosos: 915,
+        num_pcd: 550,
+        num_ativos: 1425,
+        num_inativos: 40,
+        valor_total_repassado: 2068580.00,
+        taxa_idosos: 62.46,
+        taxa_pcd: 37.54,
+        bairro_destaque: 'Santo Amaro',
+      },
+      {
+        id: 3,
+        mes_referencia: 'Setembro/2026',
+        total_beneficiarios: 1490,
+        num_idosos: 930,
+        num_pcd: 560,
+        num_ativos: 1450,
+        num_inativos: 40,
+        valor_total_repassado: 2103880.00,
+        taxa_idosos: 62.42,
+        taxa_pcd: 37.58,
+        bairro_destaque: 'Ibura',
+      },
+      {
+        id: 4,
+        mes_referencia: 'Outubro/2026',
+        total_beneficiarios: 1520,
+        num_idosos: 950,
+        num_pcd: 570,
+        num_ativos: 1480,
+        num_inativos: 40,
+        valor_total_repassado: 2146240.00,
+        taxa_idosos: 62.50,
+        taxa_pcd: 37.50,
+        bairro_destaque: 'Várzea',
+      },
+    ];
+
+    for (const ind of indicadoresData) {
+      await connection.query(
+        `INSERT INTO indicadores (id, mes_referencia, total_beneficiarios, num_idosos, num_pcd, num_ativos, num_inativos, valor_total_repassado, taxa_idosos, taxa_pcd, bairro_destaque)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+           mes_referencia = VALUES(mes_referencia),
+           total_beneficiarios = VALUES(total_beneficiarios),
+           num_idosos = VALUES(num_idosos),
+           num_pcd = VALUES(num_pcd),
+           num_ativos = VALUES(num_ativos),
+           num_inativos = VALUES(num_inativos),
+           valor_total_repassado = VALUES(valor_total_repassado),
+           taxa_idosos = VALUES(taxa_idosos),
+           taxa_pcd = VALUES(taxa_pcd),
+           bairro_destaque = VALUES(bairro_destaque)`,
+        [
+          ind.id,
+          ind.mes_referencia,
+          ind.total_beneficiarios,
+          ind.num_idosos,
+          ind.num_pcd,
+          ind.num_ativos,
+          ind.num_inativos,
+          ind.valor_total_repassado,
+          ind.taxa_idosos,
+          ind.taxa_pcd,
+          ind.bairro_destaque,
+        ]
       );
     }
 
@@ -251,6 +365,7 @@ export async function runSeed() {
         permissoes: permissoesData.length,
         usuarios: usuariosData.length,
         beneficiarios: beneficiariosData.length,
+        indicadores: indicadoresData.length,
         vinculos_papel_permissao: papelPermissoes.length,
         vinculos_usuario_papel: usuarioPapeis.length,
       },

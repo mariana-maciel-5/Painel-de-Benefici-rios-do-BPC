@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { X, Plus, Calendar, DollarSign, User, MapPin } from 'lucide-react';
 import type { NovoBeneficiarioPayload } from '../types/beneficiario.types';
+import { BAIRROS_RECIFE_PADRAO } from '../hooks/useBeneficiarios';
 
 interface BeneficiarioModalProps {
   isOpen: boolean;
@@ -8,12 +9,30 @@ interface BeneficiarioModalProps {
   onSubmit: (payload: NovoBeneficiarioPayload) => Promise<any>;
 }
 
+const RPA_MAP: Record<string, string> = {
+  'Santo Amaro': 'RPA 1',
+  'Boa Vista': 'RPA 1',
+  'Arruda': 'RPA 2',
+  'Casa Amarela': 'RPA 3',
+  'Madalena': 'RPA 4',
+  'Torre': 'RPA 4',
+  'Cordeiro': 'RPA 4',
+  'Várzea': 'RPA 4',
+  'Afogados': 'RPA 5',
+  'San Martin': 'RPA 5',
+  'Tejipió': 'RPA 5',
+  'Boa Viagem': 'RPA 6',
+  'Pina': 'RPA 6',
+  'Ibura': 'RPA 6',
+};
+
 export function BeneficiarioModal({ isOpen, onClose, onSubmit }: BeneficiarioModalProps) {
   const [nome, setNome] = useState('');
   const [cpf, setCpf] = useState('');
   const [nis, setNis] = useState('');
   const [valorBeneficio, setValorBeneficio] = useState('1412.00');
   const [dataConcessao, setDataConcessao] = useState(new Date().toISOString().split('T')[0]);
+  const [dataSolicitacao, setDataSolicitacao] = useState('');
   const [tipoBeneficio, setTipoBeneficio] = useState('Idoso (65+ anos)');
   const [bairro, setBairro] = useState('Casa Amarela');
   const [ativo, setAtivo] = useState(true);
@@ -38,9 +57,11 @@ export function BeneficiarioModal({ isOpen, onClose, onSubmit }: BeneficiarioMod
         nis: nis.trim() || undefined,
         valor_beneficio: parseFloat(valorBeneficio) || 1412.0,
         data_concessao: dataConcessao,
+        data_solicitacao: dataSolicitacao || undefined,
         ativo,
         tipo_beneficio: tipoBeneficio,
-        bairro: bairro.trim() || undefined,
+        bairro: bairro.trim(),
+        rpa: RPA_MAP[bairro] || 'RPA Recife',
       });
       onClose();
     } catch (err: any) {
@@ -56,7 +77,7 @@ export function BeneficiarioModal({ isOpen, onClose, onSubmit }: BeneficiarioMod
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
           <div>
             <h3 className="font-bold text-slate-800 text-base">Novo Beneficiário BPC</h3>
-            <p className="text-xs text-slate-500">Cadastre a concessão de benefício da Assistência Social</p>
+            <p className="text-xs text-slate-500">Cadastre a concessão com dados de localização e período</p>
           </div>
           <button
             onClick={onClose}
@@ -120,21 +141,40 @@ export function BeneficiarioModal({ isOpen, onClose, onSubmit }: BeneficiarioMod
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">
-                Valor do Benefício (R$) *
+                Bairro do Recife *
               </label>
               <div className="relative">
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  value={valorBeneficio}
-                  onChange={(e) => setValorBeneficio(e.target.value)}
+                <select
+                  value={bairro}
+                  onChange={(e) => setBairro(e.target.value)}
                   className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
-                />
-                <DollarSign className="w-4 h-4 text-slate-400 absolute right-3 top-2.5" />
+                >
+                  {BAIRROS_RECIFE_PADRAO.map((b) => (
+                    <option key={b} value={b}>
+                      {b} ({RPA_MAP[b] || 'Recife'})
+                    </option>
+                  ))}
+                </select>
+                <MapPin className="w-4 h-4 text-slate-400 absolute right-3 top-2.5 pointer-events-none" />
               </div>
             </div>
 
+            <div>
+              <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">
+                Tipo de Benefício
+              </label>
+              <select
+                value={tipoBeneficio}
+                onChange={(e) => setTipoBeneficio(e.target.value)}
+                className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+              >
+                <option value="Idoso (65+ anos)">Idoso (65+ anos)</option>
+                <option value="Pessoa com Deficiência (PCD)">Pessoa com Deficiência (PCD)</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">
                 Data de Concessão *
@@ -150,37 +190,37 @@ export function BeneficiarioModal({ isOpen, onClose, onSubmit }: BeneficiarioMod
                 <Calendar className="w-4 h-4 text-slate-400 absolute right-3 top-2.5 pointer-events-none" />
               </div>
             </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">
-                Tipo de Benefício
-              </label>
-              <select
-                value={tipoBeneficio}
-                onChange={(e) => setTipoBeneficio(e.target.value)}
-                className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
-              >
-                <option value="Idoso (65+ anos)">Idoso (65+ anos)</option>
-                <option value="Pessoa com Deficiência (PCD)">Pessoa com Deficiência (PCD)</option>
-              </select>
-            </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">
-                Bairro do Recife
+                Data de Requerimento
               </label>
               <div className="relative">
                 <input
-                  type="text"
-                  value={bairro}
-                  onChange={(e) => setBairro(e.target.value)}
-                  placeholder="Ex: Santo Amaro"
+                  type="date"
+                  value={dataSolicitacao}
+                  onChange={(e) => setDataSolicitacao(e.target.value)}
                   className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
                 />
-                <MapPin className="w-4 h-4 text-slate-400 absolute right-3 top-2.5" />
+                <Calendar className="w-4 h-4 text-slate-400 absolute right-3 top-2.5 pointer-events-none" />
               </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">
+              Valor Mensal do Benefício (R$) *
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                step="0.01"
+                required
+                value={valorBeneficio}
+                onChange={(e) => setValorBeneficio(e.target.value)}
+                className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+              />
+              <DollarSign className="w-4 h-4 text-slate-400 absolute right-3 top-2.5" />
             </div>
           </div>
 

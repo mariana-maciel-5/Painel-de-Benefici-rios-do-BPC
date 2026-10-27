@@ -273,35 +273,89 @@ async function startServer() {
     }
   });
 
-  // Endpoints para Beneficiários BPC
+  // Endpoints para Beneficiários BPC (com suporte a filtro de bairro e período)
   fastify.get('/api/beneficiarios', { preHandler: authenticate }, async (request: any, reply) => {
+    const { bairro, data_inicio, data_fim, ativo } = (request.query as any) || {};
+
     try {
-      const [rows]: any = await poolConnection.query(`
-        SELECT id, nome, cpf, nis, valor_beneficio, data_concessao, ativo, tipo_beneficio, bairro, data_criacao
+      let query = `
+        SELECT id, nome, cpf, nis, valor_beneficio, data_concessao, data_solicitacao, data_revisao,
+               ativo, tipo_beneficio, bairro, rpa, data_criacao
         FROM beneficiarios
-        ORDER BY id ASC
-      `);
+        WHERE 1=1
+      `;
+      const params: any[] = [];
+
+      if (bairro && bairro !== 'todos') {
+        query += ` AND bairro = ?`;
+        params.push(bairro);
+      }
+
+      if (data_inicio) {
+        query += ` AND data_concessao >= ?`;
+        params.push(data_inicio);
+      }
+
+      if (data_fim) {
+        query += ` AND data_concessao <= ?`;
+        params.push(data_fim);
+      }
+
+      if (ativo !== undefined && ativo !== 'todos') {
+        query += ` AND ativo = ?`;
+        params.push(ativo === 'true' || ativo === '1' ? 1 : 0);
+      }
+
+      query += ` ORDER BY data_concessao DESC, id ASC`;
+
+      const [rows]: any = await poolConnection.query(query, params);
       return { success: true, data: rows };
     } catch (err: any) {
       // Mock fallback de demonstração para preview
-      return {
-        success: true,
-        data: [
-          { id: 1, nome: 'Severino Ramos da Silva', cpf: '123.456.789-01', nis: '10987654321', valor_beneficio: 1412.00, data_concessao: '2021-03-15', ativo: 1, tipo_beneficio: 'Idoso (65+ anos)', bairro: 'Casa Amarela' },
-          { id: 2, nome: 'Maria das Dores de Souza', cpf: '234.567.890-12', nis: '20987654322', valor_beneficio: 1412.00, data_concessao: '2020-08-10', ativo: 1, tipo_beneficio: 'Pessoa com Deficiência (PCD)', bairro: 'Santo Amaro' },
-          { id: 3, nome: 'José Carlos Cavalcanti', cpf: '345.678.901-23', nis: '30987654323', valor_beneficio: 1412.00, data_concessao: '2019-11-20', ativo: 1, tipo_beneficio: 'Idoso (65+ anos)', bairro: 'Várzea' },
-          { id: 4, nome: 'Francisca Alves de Lima', cpf: '456.789.012-34', nis: '40987654324', valor_beneficio: 1412.00, data_concessao: '2022-01-05', ativo: 1, tipo_beneficio: 'Pessoa com Deficiência (PCD)', bairro: 'Ibura' },
-          { id: 5, nome: 'Manoel Ferreira dos Santos', cpf: '567.890.123-45', nis: '50987654325', valor_beneficio: 1412.00, data_concessao: '2018-05-18', ativo: 0, tipo_beneficio: 'Idoso (65+ anos)', bairro: 'Boa Viagem' },
-          { id: 6, nome: 'Tereza Cristina Medeiros', cpf: '678.901.234-56', nis: '60987654326', valor_beneficio: 1412.00, data_concessao: '2023-06-22', ativo: 1, tipo_beneficio: 'Pessoa com Deficiência (PCD)', bairro: 'Afogados' },
-          { id: 7, nome: 'Antônio Bezerra de Araújo', cpf: '789.012.345-67', nis: '70987654327', valor_beneficio: 1412.00, data_concessao: '2021-09-30', ativo: 1, tipo_beneficio: 'Idoso (65+ anos)', bairro: 'Pina' },
-          { id: 8, nome: 'Raimunda Nonata Duarte', cpf: '890.123.456-78', nis: '80987654328', valor_beneficio: 1412.00, data_concessao: '2022-12-14', ativo: 1, tipo_beneficio: 'Idoso (65+ anos)', bairro: 'Tejipió' },
-        ],
-      };
+      let mockList = [
+        { id: 1, nome: 'Severino Ramos da Silva', cpf: '123.456.789-01', nis: '10987654321', valor_beneficio: 1412.00, data_concessao: '2021-03-15', data_solicitacao: '2021-01-10', data_revisao: '2023-03-15', ativo: 1, tipo_beneficio: 'Idoso (65+ anos)', bairro: 'Casa Amarela', rpa: 'RPA 3' },
+        { id: 2, nome: 'Maria das Dores de Souza', cpf: '234.567.890-12', nis: '20987654322', valor_beneficio: 1412.00, data_concessao: '2020-08-10', data_solicitacao: '2020-05-12', data_revisao: '2022-08-10', ativo: 1, tipo_beneficio: 'Pessoa com Deficiência (PCD)', bairro: 'Santo Amaro', rpa: 'RPA 1' },
+        { id: 3, nome: 'José Carlos Cavalcanti', cpf: '345.678.901-23', nis: '30987654323', valor_beneficio: 1412.00, data_concessao: '2019-11-20', data_solicitacao: '2019-09-01', data_revisao: '2021-11-20', ativo: 1, tipo_beneficio: 'Idoso (65+ anos)', bairro: 'Várzea', rpa: 'RPA 4' },
+        { id: 4, nome: 'Francisca Alves de Lima', cpf: '456.789.012-34', nis: '40987654324', valor_beneficio: 1412.00, data_concessao: '2022-01-05', data_solicitacao: '2021-10-15', data_revisao: '2024-01-05', ativo: 1, tipo_beneficio: 'Pessoa com Deficiência (PCD)', bairro: 'Ibura', rpa: 'RPA 6' },
+        { id: 5, nome: 'Manoel Ferreira dos Santos', cpf: '567.890.123-45', nis: '50987654325', valor_beneficio: 1412.00, data_concessao: '2018-05-18', data_solicitacao: '2018-02-14', data_revisao: '2020-05-18', ativo: 0, tipo_beneficio: 'Idoso (65+ anos)', bairro: 'Boa Viagem', rpa: 'RPA 6' },
+        { id: 6, nome: 'Tereza Cristina Medeiros', cpf: '678.901.234-56', nis: '60987654326', valor_beneficio: 1412.00, data_concessao: '2023-06-22', data_solicitacao: '2023-03-10', data_revisao: '2025-06-22', ativo: 1, tipo_beneficio: 'Pessoa com Deficiência (PCD)', bairro: 'Afogados', rpa: 'RPA 5' },
+        { id: 7, nome: 'Antônio Bezerra de Araújo', cpf: '789.012.345-67', nis: '70987654327', valor_beneficio: 1412.00, data_concessao: '2021-09-30', data_solicitacao: '2021-06-20', data_revisao: '2023-09-30', ativo: 1, tipo_beneficio: 'Idoso (65+ anos)', bairro: 'Pina', rpa: 'RPA 6' },
+        { id: 8, nome: 'Raimunda Nonata Duarte', cpf: '890.123.456-78', nis: '80987654328', valor_beneficio: 1412.00, data_concessao: '2022-12-14', data_solicitacao: '2022-09-05', data_revisao: '2024-12-14', ativo: 1, tipo_beneficio: 'Idoso (65+ anos)', bairro: 'Tejipió', rpa: 'RPA 5' },
+      ];
+
+      if (bairro && bairro !== 'todos') {
+        mockList = mockList.filter((b) => b.bairro.toLowerCase() === bairro.toLowerCase());
+      }
+      if (data_inicio) {
+        mockList = mockList.filter((b) => b.data_concessao >= data_inicio);
+      }
+      if (data_fim) {
+        mockList = mockList.filter((b) => b.data_concessao <= data_fim);
+      }
+      if (ativo !== undefined && ativo !== 'todos') {
+        const isAtivoVal = ativo === 'true' || ativo === '1' ? 1 : 0;
+        mockList = mockList.filter((b) => b.ativo === isAtivoVal);
+      }
+
+      return { success: true, data: mockList };
     }
   });
 
   fastify.post('/api/beneficiarios', { preHandler: authenticate }, async (request: any, reply) => {
-    const { nome, cpf, nis, valor_beneficio, data_concessao, ativo, tipo_beneficio, bairro } = request.body || {};
+    const {
+      nome,
+      cpf,
+      nis,
+      valor_beneficio,
+      data_concessao,
+      data_solicitacao,
+      data_revisao,
+      ativo,
+      tipo_beneficio,
+      bairro,
+      rpa,
+    } = request.body || {};
+
     if (!nome || !valor_beneficio || !data_concessao) {
       return reply.status(400).send({
         success: false,
@@ -312,9 +366,21 @@ async function startServer() {
     try {
       const isAtivo = ativo !== undefined ? Boolean(ativo) : true;
       const [res]: any = await poolConnection.query(
-        `INSERT INTO beneficiarios (nome, cpf, nis, valor_beneficio, data_concessao, ativo, tipo_beneficio, bairro)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [nome, cpf || null, nis || null, Number(valor_beneficio), data_concessao, isAtivo, tipo_beneficio || 'Idoso (65+ anos)', bairro || 'Recife']
+        `INSERT INTO beneficiarios (nome, cpf, nis, valor_beneficio, data_concessao, data_solicitacao, data_revisao, ativo, tipo_beneficio, bairro, rpa)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          nome,
+          cpf || null,
+          nis || null,
+          Number(valor_beneficio),
+          data_concessao,
+          data_solicitacao || null,
+          data_revisao || null,
+          isAtivo,
+          tipo_beneficio || 'Idoso (65+ anos)',
+          bairro || 'Recife',
+          rpa || null,
+        ]
       );
       return {
         success: true,
@@ -344,6 +410,228 @@ async function startServer() {
       return reply.status(500).send({
         success: false,
         message: `Erro ao atualizar status: ${err.message}`,
+      });
+    }
+  });
+
+  // Endpoints para a Entidade Indicadores
+  fastify.get('/api/indicadores', { preHandler: authenticate }, async (request: any, reply) => {
+    try {
+      const [rows]: any = await poolConnection.query(`
+        SELECT id, mes_referencia, total_beneficiarios, num_idosos, num_pcd,
+               num_ativos, num_inativos, valor_total_repassado, taxa_idosos, taxa_pcd,
+               bairro_destaque, data_calculo, data_criacao
+        FROM indicadores
+        ORDER BY id DESC
+      `);
+      return { success: true, data: rows };
+    } catch (err: any) {
+      // Mock fallback de demonstração para preview
+      return {
+        success: true,
+        data: [
+          {
+            id: 4,
+            mes_referencia: 'Outubro/2026',
+            total_beneficiarios: 1520,
+            num_idosos: 950,
+            num_pcd: 570,
+            num_ativos: 1480,
+            num_inativos: 40,
+            valor_total_repassado: 2146240.00,
+            taxa_idosos: 62.50,
+            taxa_pcd: 37.50,
+            bairro_destaque: 'Várzea',
+            data_calculo: '2026-10-27T10:00:00.000Z',
+          },
+          {
+            id: 3,
+            mes_referencia: 'Setembro/2026',
+            total_beneficiarios: 1490,
+            num_idosos: 930,
+            num_pcd: 560,
+            num_ativos: 1450,
+            num_inativos: 40,
+            valor_total_repassado: 2103880.00,
+            taxa_idosos: 62.42,
+            taxa_pcd: 37.58,
+            bairro_destaque: 'Ibura',
+            data_calculo: '2026-09-30T10:00:00.000Z',
+          },
+          {
+            id: 2,
+            mes_referencia: 'Agosto/2026',
+            total_beneficiarios: 1465,
+            num_idosos: 915,
+            num_pcd: 550,
+            num_ativos: 1425,
+            num_inativos: 40,
+            valor_total_repassado: 2068580.00,
+            taxa_idosos: 62.46,
+            taxa_pcd: 37.54,
+            bairro_destaque: 'Santo Amaro',
+            data_calculo: '2026-08-31T10:00:00.000Z',
+          },
+          {
+            id: 1,
+            mes_referencia: 'Julho/2026',
+            total_beneficiarios: 1420,
+            num_idosos: 890,
+            num_pcd: 530,
+            num_ativos: 1380,
+            num_inativos: 40,
+            valor_total_repassado: 2005040.00,
+            taxa_idosos: 62.68,
+            taxa_pcd: 37.32,
+            bairro_destaque: 'Casa Amarela',
+            data_calculo: '2026-07-31T10:00:00.000Z',
+          },
+        ],
+      };
+    }
+  });
+
+  fastify.get('/api/indicadores/atual', { preHandler: authenticate }, async (request: any, reply) => {
+    try {
+      // 1. Tenta buscar da tabela indicadores
+      const [rows]: any = await poolConnection.query(`
+        SELECT * FROM indicadores ORDER BY id DESC LIMIT 1
+      `);
+
+      if (rows && rows.length > 0) {
+        return { success: true, data: rows[0] };
+      }
+
+      // 2. Se a tabela estiver vazia, calcula dinamicamente da tabela beneficiarios
+      const [stats]: any = await poolConnection.query(`
+        SELECT 
+          COUNT(*) as total_beneficiarios,
+          SUM(CASE WHEN tipo_beneficio LIKE '%Idoso%' THEN 1 ELSE 0 END) as num_idosos,
+          SUM(CASE WHEN tipo_beneficio LIKE '%Deficiência%' OR tipo_beneficio LIKE '%PCD%' THEN 1 ELSE 0 END) as num_pcd,
+          SUM(CASE WHEN ativo = 1 THEN 1 ELSE 0 END) as num_ativos,
+          SUM(CASE WHEN ativo = 0 THEN 1 ELSE 0 END) as num_inativos,
+          COALESCE(SUM(CASE WHEN ativo = 1 THEN valor_beneficio ELSE 0 END), 0) as valor_total_repassado
+        FROM beneficiarios
+      `);
+
+      const current = stats[0] || {};
+      const total = Number(current.total_beneficiarios) || 0;
+      const idosos = Number(current.num_idosos) || 0;
+      const pcd = Number(current.num_pcd) || 0;
+
+      return {
+        success: true,
+        data: {
+          mes_referencia: 'Outubro/2026',
+          total_beneficiarios: total,
+          num_idosos: idosos,
+          num_pcd: pcd,
+          num_ativos: Number(current.num_ativos) || 0,
+          num_inativos: Number(current.num_inativos) || 0,
+          valor_total_repassado: Number(current.valor_total_repassado) || 0,
+          taxa_idosos: total > 0 ? ((idosos / total) * 100).toFixed(2) : '0.00',
+          taxa_pcd: total > 0 ? ((pcd / total) * 100).toFixed(2) : '0.00',
+          bairro_destaque: 'Casa Amarela',
+        },
+      };
+    } catch (err: any) {
+      return {
+        success: true,
+        data: {
+          mes_referencia: 'Outubro/2026',
+          total_beneficiarios: 1520,
+          num_idosos: 950,
+          num_pcd: 570,
+          num_ativos: 1480,
+          num_inativos: 40,
+          valor_total_repassado: 2146240.00,
+          taxa_idosos: '62.50',
+          taxa_pcd: '37.50',
+          bairro_destaque: 'Várzea',
+        },
+      };
+    }
+  });
+
+  fastify.post('/api/indicadores/recalcular', { preHandler: authenticate }, async (request: any, reply) => {
+    try {
+      const mesRef = 'Outubro/2026';
+      const [stats]: any = await poolConnection.query(`
+        SELECT 
+          COUNT(*) as total_beneficiarios,
+          SUM(CASE WHEN tipo_beneficio LIKE '%Idoso%' THEN 1 ELSE 0 END) as num_idosos,
+          SUM(CASE WHEN tipo_beneficio LIKE '%Deficiência%' OR tipo_beneficio LIKE '%PCD%' THEN 1 ELSE 0 END) as num_pcd,
+          SUM(CASE WHEN ativo = 1 THEN 1 ELSE 0 END) as num_ativos,
+          SUM(CASE WHEN ativo = 0 THEN 1 ELSE 0 END) as num_inativos,
+          COALESCE(SUM(CASE WHEN ativo = 1 THEN valor_beneficio ELSE 0 END), 0) as valor_total_repassado
+        FROM beneficiarios
+      `);
+
+      const [bairros]: any = await poolConnection.query(`
+        SELECT bairro, COUNT(*) as qtd
+        FROM beneficiarios
+        WHERE bairro IS NOT NULL AND bairro != ''
+        GROUP BY bairro
+        ORDER BY qtd DESC
+        LIMIT 1
+      `);
+
+      const current = stats[0] || {};
+      const total = Number(current.total_beneficiarios) || 0;
+      const idosos = Number(current.num_idosos) || 0;
+      const pcd = Number(current.num_pcd) || 0;
+      const ativos = Number(current.num_ativos) || 0;
+      const inativos = Number(current.num_inativos) || 0;
+      const valor = Number(current.valor_total_repassado) || 0;
+      const taxaIdosos = total > 0 ? ((idosos / total) * 100).toFixed(2) : '0.00';
+      const taxaPcd = total > 0 ? ((pcd / total) * 100).toFixed(2) : '0.00';
+      const bairroDestaque = (bairros && bairros[0]?.bairro) || 'Recife';
+
+      await poolConnection.query(`
+        INSERT INTO indicadores 
+          (mes_referencia, total_beneficiarios, num_idosos, num_pcd, num_ativos, num_inativos, valor_total_repassado, taxa_idosos, taxa_pcd, bairro_destaque)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [mesRef, total, idosos, pcd, ativos, inativos, valor, taxaIdosos, taxaPcd, bairroDestaque]);
+
+      return {
+        success: true,
+        message: 'Indicadores recalculados e consolidados com sucesso a partir da base de beneficiários!',
+        indicador: {
+          mes_referencia: mesRef,
+          total_beneficiarios: total,
+          num_idosos: idosos,
+          num_pcd: pcd,
+          num_ativos: ativos,
+          num_inativos: inativos,
+          valor_total_repassado: valor,
+          taxa_idosos: taxaIdosos,
+          taxa_pcd: taxaPcd,
+          bairro_destaque: bairroDestaque,
+        },
+      };
+    } catch (err: any) {
+      if (err.message?.includes('ECONNREFUSED') || err.message?.includes('ETIMEDOUT')) {
+        return {
+          success: true,
+          message: 'Indicadores recalculados com sucesso a partir da base atual (Modo Demonstração)!',
+          indicador: {
+            id: 5,
+            mes_referencia: 'Outubro/2026',
+            total_beneficiarios: 1528,
+            num_idosos: 955,
+            num_pcd: 573,
+            num_ativos: 1488,
+            num_inativos: 40,
+            valor_total_repassado: 2157536.00,
+            taxa_idosos: '62.50',
+            taxa_pcd: '37.50',
+            bairro_destaque: 'Casa Amarela',
+          },
+        };
+      }
+      return reply.status(500).send({
+        success: false,
+        message: `Erro ao recalcular indicadores: ${err.message}`,
       });
     }
   });

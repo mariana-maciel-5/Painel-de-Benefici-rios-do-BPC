@@ -1,9 +1,9 @@
-import { ShieldCheck, Users, Shield, Layers, Key, LogOut, HeartHandshake } from 'lucide-react';
+import { ShieldCheck, Users, Shield, Layers, Key, LogOut, HeartHandshake, TrendingUp } from 'lucide-react';
 import { useAuthContext } from '../hooks/useAuthContext';
 import { getUserInitials } from '../utils/formatters';
 import { APP_CONFIG } from '../config/constants';
 
-export type DashboardTabType = 'beneficiarios' | 'usuarios' | 'papeis' | 'esquema' | 'jwt';
+export type DashboardTabType = 'beneficiarios' | 'indicadores' | 'usuarios' | 'papeis' | 'esquema' | 'jwt';
 
 interface SidebarProps {
   activeTab: DashboardTabType;
@@ -47,6 +47,22 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
         </div>
 
         <div
+          onClick={() => setActiveTab('indicadores')}
+          className={`flex items-center justify-between px-3 py-2.5 rounded-xl font-medium text-sm cursor-pointer transition-all ${
+            activeTab === 'indicadores'
+              ? 'bg-blue-600 text-white font-semibold shadow-xs'
+              : 'text-slate-700 hover:bg-slate-50'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <TrendingUp className="w-4 h-4" /> Indicadores BPC
+          </div>
+          {activeTab === 'indicadores' && (
+            <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+          )}
+        </div>
+
+        <div
           onClick={() => setActiveTab('usuarios')}
           className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm cursor-pointer transition-all ${
             activeTab === 'usuarios'
@@ -54,8 +70,9 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
               : 'text-slate-600 hover:bg-slate-50'
           }`}
         >
-          <Users className="w-4 h-4" /> Usuários
+          <Users className="w-4 h-4" /> Usuários Operadores
         </div>
+
         <div
           onClick={() => setActiveTab('papeis')}
           className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm cursor-pointer transition-all ${
@@ -66,6 +83,7 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
         >
           <Shield className="w-4 h-4" /> Papéis & Permissões
         </div>
+
         <div
           onClick={() => setActiveTab('esquema')}
           className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm cursor-pointer transition-all ${
@@ -74,8 +92,9 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
               : 'text-slate-600 hover:bg-slate-50'
           }`}
         >
-          <Layers className="w-4 h-4" /> Entidades do Banco
+          <Layers className="w-4 h-4" /> Tabelas do Banco
         </div>
+
         <div
           onClick={() => setActiveTab('jwt')}
           className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm cursor-pointer transition-all ${

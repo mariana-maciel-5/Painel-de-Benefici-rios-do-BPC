@@ -34,12 +34,13 @@ Se o token não for enviado ou for inválido/expirado, o backend retornará `401
 
 ## 🗄️ Entidades do Banco de Dados
 
-1. **`beneficiarios`**: `id`, `nome`, `cpf`, `nis`, `valor_beneficio`, `data_concessao`, `ativo`, `tipo_beneficio`, `bairro`, `data_criacao`, `data_atualizacao`
-2. **`usuarios`**: `id`, `nome`, `email`, `senha`, `ativo`, `data_criacao`, `data_atualizacao`
-3. **`papeis`**: `id`, `nome`, `descricao`, `data_criacao`, `data_atualizacao`
-4. **`permissoes`**: `id`, `nome`, `descricao`, `data_criacao`, `data_atualizacao`
-5. **`usuario_papel`**: `usuario_id`, `papel_id` *(Chave Composta e FK com CASCADE)*
-6. **`papel_permissao`**: `papel_id`, `permissao_id` *(Chave Composta e FK com CASCADE)*
+1. **`indicadores`**: `id`, `mes_referencia`, `total_beneficiarios`, `num_idosos`, `num_pcd`, `num_ativos`, `num_inativos`, `valor_total_repassado`, `taxa_idosos`, `taxa_pcd`, `bairro_destaque`, `data_calculo`, `data_criacao`, `data_atualizacao`
+2. **`beneficiarios`**: `id`, `nome`, `cpf`, `nis`, `valor_beneficio`, `data_concessao`, `data_solicitacao`, `data_revisao`, `ativo`, `tipo_beneficio`, `bairro`, `rpa`, `data_criacao`, `data_atualizacao`
+3. **`usuarios`**: `id`, `nome`, `email`, `senha`, `ativo`, `data_criacao`, `data_atualizacao`
+4. **`papeis`**: `id`, `nome`, `descricao`, `data_criacao`, `data_atualizacao`
+5. **`permissoes`**: `id`, `nome`, `descricao`, `data_criacao`, `data_atualizacao`
+6. **`usuario_papel`**: `usuario_id`, `papel_id` *(Chave Composta e FK com CASCADE)*
+7. **`papel_permissao`**: `papel_id`, `permissao_id` *(Chave Composta e FK com CASCADE)*
 
 ---
 
@@ -306,6 +307,54 @@ Alterna o status do benefício entre ativo e inativo/suspenso.
 
 - **Método**: `PATCH`
 - **URL**: `http://localhost:3000/api/beneficiarios/1/toggle-status`
+- **Headers**: `Authorization: Bearer <token>`
+
+---
+
+### 10. `GET /api/indicadores` *(Protegido por JWT)*
+Retorna a série histórica de registros da entidade `indicadores`.
+
+- **Método**: `GET`
+- **URL**: `http://localhost:3000/api/indicadores`
+- **Headers**: `Authorization: Bearer <token>`
+- **Exemplo de Resposta**:
+  ```json
+  {
+    "success": true,
+    "data": [
+      {
+        "id": 4,
+        "mes_referencia": "Outubro/2026",
+        "total_beneficiarios": 1520,
+        "num_idosos": 950,
+        "num_pcd": 570,
+        "num_ativos": 1480,
+        "num_inativos": 40,
+        "valor_total_repassado": 2146240.00,
+        "taxa_idosos": 62.50,
+        "taxa_pcd": 37.50,
+        "bairro_destaque": "Várzea"
+      }
+    ]
+  }
+  ```
+
+---
+
+### 11. `GET /api/indicadores/atual` *(Protegido por JWT)*
+Retorna o indicador consolidado mais recente do BPC Recife.
+
+- **Método**: `GET`
+- **URL**: `http://localhost:3000/api/indicadores/atual`
+- **Headers**: `Authorization: Bearer <token>`
+
+---
+
+### 12. `POST /api/indicadores/recalcular` *(Protegido por JWT)*
+Calcula e consolida dinamicamente os números a partir da base atual de beneficiários cadastrados no MySQL e gera um novo registro na tabela `indicadores`.
+
+- **Método**: `POST`
+- **URL**: `http://localhost:3000/api/indicadores/recalcular`
 - **Headers**: `Authorization: Bearer <token>`
 
 ---

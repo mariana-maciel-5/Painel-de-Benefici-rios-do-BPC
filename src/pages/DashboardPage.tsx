@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Users, Shield, Layers, Key, HeartHandshake } from 'lucide-react';
+import { Users, Shield, Layers, Key, HeartHandshake, TrendingUp } from 'lucide-react';
 import { MainLayout } from '../layouts/MainLayout';
 import { DashboardTabType } from '../layouts/Sidebar';
 import { StatCard } from '../components/StatCard';
@@ -10,9 +10,13 @@ import { PapelListTable } from '../features/papeis/components/PapelListTable';
 import { BeneficiarioListTable } from '../features/beneficiarios/components/BeneficiarioListTable';
 import { BeneficiarioStatsCards } from '../features/beneficiarios/components/BeneficiarioStatsCards';
 import { BeneficiarioModal } from '../features/beneficiarios/components/BeneficiarioModal';
+import { IndicadoresSummaryCards } from '../features/indicadores/components/IndicadoresSummaryCards';
+import { IndicadoresDistributionPanel } from '../features/indicadores/components/IndicadoresDistributionPanel';
+import { IndicadoresHistoryTable } from '../features/indicadores/components/IndicadoresHistoryTable';
 import { useUsuarios } from '../features/usuarios/hooks/useUsuarios';
 import { usePapeis } from '../features/papeis/hooks/usePapeis';
 import { useBeneficiarios } from '../features/beneficiarios/hooks/useBeneficiarios';
+import { useIndicadores } from '../features/indicadores/hooks/useIndicadores';
 import { useDatabaseStatus } from '../features/database/hooks/useDatabaseStatus';
 import { useAuthContext } from '../hooks/useAuthContext';
 
@@ -30,13 +34,31 @@ export function DashboardPage() {
     loading: beneficiariosLoading,
     searchTerm,
     setSearchTerm,
+    bairroFilter,
+    setBairroFilter,
+    dataInicioFilter,
+    setDataInicioFilter,
+    dataFimFilter,
+    setDataFimFilter,
     statusFilter,
     setStatusFilter,
+    bairrosDisponiveis,
+    temFiltrosAtivos,
+    limparFiltros,
     refetch: refetchBeneficiarios,
     toggleStatus: toggleBeneficiarioStatus,
     cadastrar: cadastrarBeneficiario,
     stats: beneficiarioStats,
   } = useBeneficiarios();
+
+  const {
+    indicadores,
+    indicadorAtual,
+    loading: indicadoresLoading,
+    recalculando: recalculandoIndicadores,
+    refetch: refetchIndicadores,
+    recalcular: recalcularIndicadores,
+  } = useIndicadores();
 
   const {
     healthMessage,
@@ -49,9 +71,12 @@ export function DashboardPage() {
 
   const handleSeed = async () => {
     await seedDatabase();
-    await refetchBeneficiarios();
-    await refetchUsuarios();
-    await refetchPapeis();
+    await Promise.all([
+      refetchBeneficiarios(),
+      refetchIndicadores(),
+      refetchUsuarios(),
+      refetchPapeis(),
+    ]);
   };
 
   const copyToken = () => {
@@ -64,10 +89,9 @@ export function DashboardPage() {
 
   return (
     <MainLayout activeTab={activeTab} setActiveTab={setActiveTab}>
-      {/* Visualização da Aba de Beneficiários */}
+      {/* 1. ABA DE BENEFICIÁRIOS */}
       {activeTab === 'beneficiarios' && (
         <div className="space-y-6">
-          {/* Header da Tela de Beneficiários */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
@@ -84,7 +108,6 @@ export function DashboardPage() {
             </div>
           </div>
 
-          {/* Cards de Métricas de Beneficiários */}
           <BeneficiarioStatsCards
             total={beneficiarioStats.total}
             ativos={beneficiarioStats.ativos}
@@ -92,7 +115,6 @@ export function DashboardPage() {
             valorTotalMensal={beneficiarioStats.valorTotalMensal}
           />
 
-          {/* Painel com a Tabela de Beneficiários */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6">
             <BeneficiarioListTable
               beneficiarios={beneficiarios}
@@ -100,15 +122,23 @@ export function DashboardPage() {
               loading={beneficiariosLoading}
               searchTerm={searchTerm}
               setSearchTerm={setSearchTerm}
+              bairroFilter={bairroFilter}
+              setBairroFilter={setBairroFilter}
+              dataInicioFilter={dataInicioFilter}
+              setDataInicioFilter={setDataInicioFilter}
+              dataFimFilter={dataFimFilter}
+              setDataFimFilter={setDataFimFilter}
               statusFilter={statusFilter}
               setStatusFilter={setStatusFilter}
+              bairrosDisponiveis={bairrosDisponiveis}
+              temFiltrosAtivos={temFiltrosAtivos}
+              onLimparFiltros={limparFiltros}
               onRefresh={refetchBeneficiarios}
               onToggleStatus={toggleBeneficiarioStatus}
               onOpenNovoModal={() => setIsModalOpen(true)}
             />
           </div>
 
-          {/* Modal de Cadastro */}
           <BeneficiarioModal
             isOpen={isModalOpen}
             onClose={() => setIsModalOpen(false)}
@@ -117,8 +147,46 @@ export function DashboardPage() {
         </div>
       )}
 
-      {/* Outras Abas Administrativas */}
-      {activeTab !== 'beneficiarios' && (
+      {/* 2. ABA DA NOVA ENTIDADE INDICADORES */}
+      {activeTab === 'indicadores' && (
+        <div className="space-y-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="p-2 bg-blue-100 text-blue-700 rounded-xl">
+                  <TrendingUp className="w-5 h-5" />
+                </span>
+                <h2 className="text-xl font-bold text-slate-800 tracking-tight">
+                  Painel de Indicadores do BPC Recife
+                </h2>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                Métricas consolidadas na entidade <code className="bg-slate-100 px-1 py-0.5 rounded text-blue-700 font-mono">indicadores</code>: Total de Beneficiários, Nº de Idosos e Nº de PCDs
+              </p>
+            </div>
+          </div>
+
+          {/* Cards de Métricas Principais Solicitadas */}
+          <IndicadoresSummaryCards indicador={indicadorAtual} />
+
+          {/* Painel de Distribuição (Idosos vs PCD, Ativos vs Inativos e Ação de Recalcular) */}
+          <IndicadoresDistributionPanel
+            indicador={indicadorAtual}
+            onRecalcular={recalcularIndicadores}
+            recalculando={recalculandoIndicadores}
+          />
+
+          {/* Tabela de Série Histórica da Entidade Indicadores */}
+          <IndicadoresHistoryTable
+            indicadores={indicadores}
+            loading={indicadoresLoading}
+            onRefresh={refetchIndicadores}
+          />
+        </div>
+      )}
+
+      {/* 3. DEMAIS ABAS DO SISTEMA */}
+      {activeTab !== 'beneficiarios' && activeTab !== 'indicadores' && (
         <div className="space-y-6">
           {/* Cards de Métricas do Sistema */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -192,7 +260,7 @@ export function DashboardPage() {
                     : 'text-slate-600 hover:bg-slate-100'
                 }`}
               >
-                <Layers className="w-3.5 h-3.5" /> Tabelas do Schema Drizzle (6)
+                <Layers className="w-3.5 h-3.5" /> Tabelas do Schema Drizzle (7)
               </button>
               <button
                 onClick={() => setActiveTab('jwt')}

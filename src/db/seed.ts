@@ -133,6 +133,115 @@ export async function runSeed() {
       );
     }
 
+    // 6. Beneficiários BPC Recife Mockados
+    const beneficiariosData = [
+      {
+        id: 1,
+        nome: 'Severino Ramos da Silva',
+        cpf: '123.456.789-01',
+        nis: '10987654321',
+        valor_beneficio: 1412.00,
+        data_concessao: '2021-03-15',
+        ativo: true,
+        tipo_beneficio: 'Idoso (65+ anos)',
+        bairro: 'Casa Amarela',
+      },
+      {
+        id: 2,
+        nome: 'Maria das Dores de Souza',
+        cpf: '234.567.890-12',
+        nis: '20987654322',
+        valor_beneficio: 1412.00,
+        data_concessao: '2020-08-10',
+        ativo: true,
+        tipo_beneficio: 'Pessoa com Deficiência (PCD)',
+        bairro: 'Santo Amaro',
+      },
+      {
+        id: 3,
+        nome: 'José Carlos Cavalcanti',
+        cpf: '345.678.901-23',
+        nis: '30987654323',
+        valor_beneficio: 1412.00,
+        data_concessao: '2019-11-20',
+        ativo: true,
+        tipo_beneficio: 'Idoso (65+ anos)',
+        bairro: 'Várzea',
+      },
+      {
+        id: 4,
+        nome: 'Francisca Alves de Lima',
+        cpf: '456.789.012-34',
+        nis: '40987654324',
+        valor_beneficio: 1412.00,
+        data_concessao: '2022-01-05',
+        ativo: true,
+        tipo_beneficio: 'Pessoa com Deficiência (PCD)',
+        bairro: 'Ibura',
+      },
+      {
+        id: 5,
+        nome: 'Manoel Ferreira dos Santos',
+        cpf: '567.890.123-45',
+        nis: '50987654325',
+        valor_beneficio: 1412.00,
+        data_concessao: '2018-05-18',
+        ativo: false,
+        tipo_beneficio: 'Idoso (65+ anos)',
+        bairro: 'Boa Viagem',
+      },
+      {
+        id: 6,
+        nome: 'Tereza Cristina Medeiros',
+        cpf: '678.901.234-56',
+        nis: '60987654326',
+        valor_beneficio: 1412.00,
+        data_concessao: '2023-06-22',
+        ativo: true,
+        tipo_beneficio: 'Pessoa com Deficiência (PCD)',
+        bairro: 'Afogados',
+      },
+      {
+        id: 7,
+        nome: 'Antônio Bezerra de Araújo',
+        cpf: '789.012.345-67',
+        nis: '70987654327',
+        valor_beneficio: 1412.00,
+        data_concessao: '2021-09-30',
+        ativo: true,
+        tipo_beneficio: 'Idoso (65+ anos)',
+        bairro: 'Pina',
+      },
+      {
+        id: 8,
+        nome: 'Raimunda Nonata Duarte',
+        cpf: '890.123.456-78',
+        nis: '80987654328',
+        valor_beneficio: 1412.00,
+        data_concessao: '2022-12-14',
+        ativo: true,
+        tipo_beneficio: 'Idoso (65+ anos)',
+        bairro: 'Tejipió',
+      },
+    ];
+
+    for (const b of beneficiariosData) {
+      await connection.query(
+        `INSERT INTO beneficiarios (id, nome, cpf, nis, valor_beneficio, data_concessao, ativo, tipo_beneficio, bairro)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE 
+           nome = VALUES(nome),
+           cpf = VALUES(cpf),
+           nis = VALUES(nis),
+           valor_beneficio = VALUES(valor_beneficio),
+           data_concessao = VALUES(data_concessao),
+           ativo = VALUES(ativo),
+           tipo_beneficio = VALUES(tipo_beneficio),
+           bairro = VALUES(bairro)`,
+        [b.id, b.nome, b.cpf, b.nis, b.valor_beneficio, b.data_concessao, b.ativo, b.tipo_beneficio, b.bairro]
+      );
+    }
+
     console.log('✅ SEED concluído com sucesso!');
     return {
       success: true,
@@ -141,6 +250,7 @@ export async function runSeed() {
         papeis: papeisData.length,
         permissoes: permissoesData.length,
         usuarios: usuariosData.length,
+        beneficiarios: beneficiariosData.length,
         vinculos_papel_permissao: papelPermissoes.length,
         vinculos_usuario_papel: usuarioPapeis.length,
       },

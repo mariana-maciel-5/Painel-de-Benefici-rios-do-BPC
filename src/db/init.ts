@@ -82,6 +82,23 @@ export async function initDatabase() {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
       `);
 
+      // 6. Tabela beneficiarios
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS beneficiarios (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          nome VARCHAR(255) NOT NULL,
+          cpf VARCHAR(14),
+          nis VARCHAR(11),
+          valor_beneficio DECIMAL(10, 2) NOT NULL,
+          data_concessao DATE NOT NULL,
+          ativo BOOLEAN NOT NULL DEFAULT TRUE,
+          tipo_beneficio VARCHAR(50) NOT NULL DEFAULT 'Idoso',
+          bairro VARCHAR(100),
+          data_criacao TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          data_atualizacao TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      `);
+
       console.log('✅ Tabelas do banco de dados (MySQL) sincronizadas com sucesso!');
       return { success: true, message: 'Tabelas sincronizadas com sucesso no MySQL.' };
     } finally {

@@ -1,11 +1,13 @@
-import { ShieldCheck, Users, Shield, Layers, Key, LogOut } from 'lucide-react';
+import { ShieldCheck, Users, Shield, Layers, Key, LogOut, HeartHandshake } from 'lucide-react';
 import { useAuthContext } from '../hooks/useAuthContext';
 import { getUserInitials } from '../utils/formatters';
 import { APP_CONFIG } from '../config/constants';
 
+export type DashboardTabType = 'beneficiarios' | 'usuarios' | 'papeis' | 'esquema' | 'jwt';
+
 interface SidebarProps {
-  activeTab: 'usuarios' | 'papeis' | 'esquema' | 'jwt';
-  setActiveTab: (tab: 'usuarios' | 'papeis' | 'esquema' | 'jwt') => void;
+  activeTab: DashboardTabType;
+  setActiveTab: (tab: DashboardTabType) => void;
 }
 
 export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
@@ -28,6 +30,22 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
       </div>
 
       <nav className="flex-1 p-4 space-y-1">
+        <div
+          onClick={() => setActiveTab('beneficiarios')}
+          className={`flex items-center justify-between px-3 py-2.5 rounded-xl font-medium text-sm cursor-pointer transition-all ${
+            activeTab === 'beneficiarios'
+              ? 'bg-blue-600 text-white font-semibold shadow-xs'
+              : 'text-slate-700 hover:bg-slate-50'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <HeartHandshake className="w-4 h-4" /> Beneficiários BPC
+          </div>
+          {activeTab === 'beneficiarios' && (
+            <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+          )}
+        </div>
+
         <div
           onClick={() => setActiveTab('usuarios')}
           className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm cursor-pointer transition-all ${

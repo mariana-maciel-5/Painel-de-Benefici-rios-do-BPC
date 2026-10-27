@@ -34,11 +34,12 @@ Se o token não for enviado ou for inválido/expirado, o backend retornará `401
 
 ## 🗄️ Entidades do Banco de Dados
 
-1. **`usuarios`**: `id`, `nome`, `email`, `senha`, `ativo`, `data_criacao`, `data_atualizacao`
-2. **`papeis`**: `id`, `nome`, `descricao`, `data_criacao`, `data_atualizacao`
-3. **`permissoes`**: `id`, `nome`, `descricao`, `data_criacao`, `data_atualizacao`
-4. **`usuario_papel`**: `usuario_id`, `papel_id` *(Chave Composta e FK com CASCADE)*
-5. **`papel_permissao`**: `papel_id`, `permissao_id` *(Chave Composta e FK com CASCADE)*
+1. **`beneficiarios`**: `id`, `nome`, `cpf`, `nis`, `valor_beneficio`, `data_concessao`, `ativo`, `tipo_beneficio`, `bairro`, `data_criacao`, `data_atualizacao`
+2. **`usuarios`**: `id`, `nome`, `email`, `senha`, `ativo`, `data_criacao`, `data_atualizacao`
+3. **`papeis`**: `id`, `nome`, `descricao`, `data_criacao`, `data_atualizacao`
+4. **`permissoes`**: `id`, `nome`, `descricao`, `data_criacao`, `data_atualizacao`
+5. **`usuario_papel`**: `usuario_id`, `papel_id` *(Chave Composta e FK com CASCADE)*
+6. **`papel_permissao`**: `papel_id`, `permissao_id` *(Chave Composta e FK com CASCADE)*
 
 ---
 
@@ -247,6 +248,65 @@ Lista todas as permissões cadastradas no sistema.
     ]
   }
   ```
+
+---
+
+### 7. `GET /api/beneficiarios` *(Protegido por JWT)*
+Retorna a listagem de beneficiários cadastrados, com nome, valor do benefício, data de concessão e status ativo/inativo.
+
+- **Método**: `GET`
+- **URL**: `http://localhost:3000/api/beneficiarios`
+- **Headers**: `Authorization: Bearer <token>`
+- **Exemplo de Resposta**:
+  ```json
+  {
+    "success": true,
+    "data": [
+      {
+        "id": 1,
+        "nome": "Severino Ramos da Silva",
+        "cpf": "123.456.789-01",
+        "nis": "10987654321",
+        "valor_beneficio": 1412.00,
+        "data_concessao": "2021-03-15",
+        "ativo": 1,
+        "tipo_beneficio": "Idoso (65+ anos)",
+        "bairro": "Casa Amarela"
+      }
+    ]
+  }
+  ```
+
+---
+
+### 8. `POST /api/beneficiarios` *(Protegido por JWT)*
+Cadastra um novo beneficiário do BPC no sistema e no banco de dados MySQL.
+
+- **Método**: `POST`
+- **URL**: `http://localhost:3000/api/beneficiarios`
+- **Headers**: `Authorization: Bearer <token>`, `Content-Type: application/json`
+- **Body (JSON)**:
+  ```json
+  {
+    "nome": "Maria das Graças Silva",
+    "cpf": "111.222.333-44",
+    "nis": "12345678901",
+    "valor_beneficio": 1412.00,
+    "data_concessao": "2024-02-10",
+    "ativo": true,
+    "tipo_beneficio": "Idoso (65+ anos)",
+    "bairro": "Afogados"
+  }
+  ```
+
+---
+
+### 9. `PATCH /api/beneficiarios/:id/toggle-status` *(Protegido por JWT)*
+Alterna o status do benefício entre ativo e inativo/suspenso.
+
+- **Método**: `PATCH`
+- **URL**: `http://localhost:3000/api/beneficiarios/1/toggle-status`
+- **Headers**: `Authorization: Bearer <token>`
 
 ---
 

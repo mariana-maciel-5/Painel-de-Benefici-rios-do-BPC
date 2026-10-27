@@ -1,11 +1,11 @@
 import { ReactNode } from 'react';
-import { Sidebar } from './Sidebar';
+import { Sidebar, DashboardTabType } from './Sidebar';
 import { Header } from '../components/Header';
 
 interface MainLayoutProps {
   children: ReactNode;
-  activeTab: 'usuarios' | 'papeis' | 'esquema' | 'jwt';
-  setActiveTab: (tab: 'usuarios' | 'papeis' | 'esquema' | 'jwt') => void;
+  activeTab: DashboardTabType;
+  setActiveTab: (tab: DashboardTabType) => void;
 }
 
 export function MainLayout({ children, activeTab, setActiveTab }: MainLayoutProps) {

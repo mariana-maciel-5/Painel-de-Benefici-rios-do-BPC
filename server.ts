@@ -40,6 +40,17 @@ async function startServer() {
 
   // Inicializa as tabelas no MySQL se a conexão estiver disponível
   let dbStatus = await initDatabase();
+  if (dbStatus.success) {
+    try {
+      const [pRows]: any = await poolConnection.query(`SELECT COUNT(*) as count FROM paineis`);
+      if (pRows && Number(pRows[0]?.count) === 0) {
+        console.log('🌱 Base de painéis vazia no MySQL, populando dados iniciais...');
+        await runSeed();
+      }
+    } catch {
+      // Falha silenciosa caso pool não esteja pronto
+    }
+  }
 
   // Rotas de API públicas
   fastify.get('/api/health', async (request, reply) => {
@@ -414,6 +425,126 @@ async function startServer() {
     }
   });
 
+  // Constantes de Dados dos Painéis e Indicadores no Backend
+  const DEFAULT_PAINEIS = [
+    { id: 1, nome: 'Painel Geral do BPC Recife', descricao: 'Monitoramento Central da Assistência Social e Concessões BPC' },
+    { id: 2, nome: 'Painel de Proteção à Pessoa Idosa', descricao: 'Acompanhamento de idosos (65+ anos) e concessões BPC' },
+    { id: 3, nome: 'Painel de Acessibilidade e Pessoa com Deficiência (PCD)', descricao: 'Indicadores de inclusão, perícia médica e laudos biopsicossociais' },
+    { id: 4, nome: 'Painel Territorial e CRAS por RPA', descricao: 'Distribuição descentralizada nas 6 Regiões Político-Administrativas do Recife' },
+    { id: 5, nome: 'Painel Orçamentário e Repasses FNAS', descricao: 'Fluxo financeiro municipal e impacto dos recursos federais' },
+  ];
+
+  const DEFAULT_INDICADORES = [
+    {
+      id: 1,
+      nome: 'Total de beneficiários',
+      descricao: 'Quantidade total consolidada de beneficiários do BPC no município do Recife',
+      unidade: 'beneficiários',
+      fonte: 'Ministério do Desenvolvimento Social - MDS',
+      painelId: 1,
+      valor: 1520.00,
+    },
+    {
+      id: 2,
+      nome: 'Beneficiários idosos',
+      descricao: 'Beneficiários do BPC com idade igual ou superior a 65 anos',
+      unidade: 'idosos',
+      fonte: 'Secretaria de Assistência Social do Recife - SAS',
+      painelId: 2,
+      valor: 950.00,
+    },
+    {
+      id: 3,
+      nome: 'Beneficiários com deficiência',
+      descricao: 'Beneficiários do BPC com impedimento de longo prazo e laudo pericial (PCD)',
+      unidade: 'pessoas com deficiência',
+      fonte: 'Secretaria de Assistência Social do Recife - SAS',
+      painelId: 3,
+      valor: 570.00,
+    },
+    {
+      id: 4,
+      nome: 'Beneficiários ativos em folha',
+      descricao: 'Benefícios regulares com pagamento mensal liberado pelo MDS',
+      unidade: 'benefícios',
+      fonte: 'Base Municipal do CadÚnico / Recife',
+      painelId: 1,
+      valor: 1480.00,
+    },
+    {
+      id: 5,
+      nome: 'Beneficiários em revisão cadastral',
+      descricao: 'Benefícios temporariamente suspensos para averiguação cadastral no CadÚnico',
+      unidade: 'benefícios',
+      fonte: 'Coordenação Municipal do BPC Recife',
+      painelId: 1,
+      valor: 40.00,
+    },
+    {
+      id: 6,
+      nome: 'Valor total mensal repassado',
+      descricao: 'Montante mensal transferido aos beneficiários do município',
+      unidade: 'reais / mês',
+      fonte: 'Fundo Nacional de Assistência Social - FNAS',
+      painelId: 5,
+      valor: 2146240.00,
+    },
+    {
+      id: 7,
+      nome: 'Taxa de concessão BPC Idoso',
+      descricao: 'Proporção percentual de idosos sobre o total de beneficiários',
+      unidade: '%',
+      fonte: 'DATAPREV / INSS / SAS Recife',
+      painelId: 2,
+      valor: 62.50,
+    },
+    {
+      id: 8,
+      nome: 'Taxa de concessão BPC Deficiência',
+      descricao: 'Proporção percentual de pessoas com deficiência sobre o total de beneficiários',
+      unidade: '%',
+      fonte: 'DATAPREV / INSS / SAS Recife',
+      painelId: 3,
+      valor: 37.50,
+    },
+    {
+      id: 9,
+      nome: 'Beneficiários atendidos na rede CRAS',
+      descricao: 'Famílias com beneficiários ativamente acompanhadas pelos CRAS do Recife',
+      unidade: 'famílias',
+      fonte: 'Rede SUAS Recife / CRAS',
+      painelId: 4,
+      valor: 1240.00,
+    },
+    {
+      id: 10,
+      nome: 'Novos requerimentos em análise',
+      descricao: 'Requerimentos sob análise administrativa e perícia técnica',
+      unidade: 'pedidos',
+      fonte: 'INSS Agência Recife',
+      painelId: 1,
+      valor: 185.00,
+    },
+    {
+      id: 11,
+      nome: 'Tempo médio de concessão',
+      descricao: 'Prazo médio entre a solicitação inicial e a homologação do benefício',
+      unidade: 'dias',
+      fonte: 'Ouvidoria da Assistência Social',
+      painelId: 1,
+      valor: 42.00,
+    },
+    {
+      id: 12,
+      nome: 'Cobertura em áreas de vulnerabilidade',
+      descricao: 'Percentual de beneficiários residentes nas ZEIS e comunidades periféricas',
+      unidade: '%',
+      fonte: 'Instituto da Cidade Pelópidas Silveira - ICPS',
+      painelId: 4,
+      valor: 78.40,
+    },
+  ];
+
   // Endpoints para Painéis e Indicadores Genéricos
   fastify.get('/api/paineis', { preHandler: authenticate }, async (request: any, reply) => {
     try {
@@ -421,19 +552,91 @@ async function startServer() {
       if (rows && rows.length > 0) {
         return { success: true, data: rows };
       }
-      throw new Error('Sem registros na tabela paineis');
     } catch {
-      return {
-        success: true,
-        data: [
-          { id: 1, nome: 'Painel Geral do BPC Recife', descricao: 'Monitoramento Central da Assistência Social e Concessões BPC' },
-          { id: 2, nome: 'Painel de Proteção à Pessoa Idosa', descricao: 'Acompanhamento de idosos (65+ anos) e concessões BPC' },
-          { id: 3, nome: 'Painel de Acessibilidade e Pessoa com Deficiência (PCD)', descricao: 'Indicadores de inclusão, perícia médica e laudos biopsicossociais' },
-          { id: 4, nome: 'Painel Territorial e CRAS por RPA', descricao: 'Distribuição descentralizada nas 6 Regiões Político-Administrativas do Recife' },
-          { id: 5, nome: 'Painel Orçamentário e Repasses FNAS', descricao: 'Fluxo financeiro municipal e impacto dos recursos federais' },
-        ],
-      };
+      // Fallback
     }
+    return {
+      success: true,
+      data: DEFAULT_PAINEIS,
+    };
+  });
+
+  // Obter painel por ID
+  fastify.get('/api/paineis/:id', { preHandler: authenticate }, async (request: any, reply) => {
+    const { id } = request.params;
+    try {
+      const [rows]: any = await poolConnection.query(`SELECT * FROM paineis WHERE id = ? LIMIT 1`, [id]);
+      if (rows && rows.length > 0) {
+        return { success: true, data: rows[0] };
+      }
+    } catch {
+      // Fallback
+    }
+    const found = DEFAULT_PAINEIS.find((p) => p.id === Number(id));
+    if (found) return { success: true, data: found };
+    return reply.status(404).send({ success: false, message: 'Painel não encontrado.' });
+  });
+
+  // Cadastrar novo painel
+  fastify.post('/api/paineis', { preHandler: authenticate }, async (request: any, reply) => {
+    const { nome, descricao } = request.body || {};
+    if (!nome) {
+      return reply.status(400).send({ success: false, message: 'O nome do painel é obrigatório.' });
+    }
+    try {
+      const [res]: any = await poolConnection.query(
+        `INSERT INTO paineis (nome, descricao) VALUES (?, ?)`,
+        [nome.trim(), descricao?.trim() || null]
+      );
+      return { success: true, message: 'Painel criado com sucesso no banco de dados!', id: res.insertId };
+    } catch (err: any) {
+      const novoId = DEFAULT_PAINEIS.length + 1;
+      return { success: true, message: 'Painel criado com sucesso (Modo Demonstração)!', id: novoId };
+    }
+  });
+
+  // Atualizar painel
+  fastify.put('/api/paineis/:id', { preHandler: authenticate }, async (request: any, reply) => {
+    const { id } = request.params;
+    const { nome, descricao } = request.body || {};
+    try {
+      await poolConnection.query(
+        `UPDATE paineis SET nome = ?, descricao = ? WHERE id = ?`,
+        [nome.trim(), descricao?.trim() || null, id]
+      );
+      return { success: true, message: 'Painel atualizado com sucesso!' };
+    } catch (err: any) {
+      return { success: true, message: 'Painel atualizado com sucesso (Modo Demonstração)!' };
+    }
+  });
+
+  // Excluir painel
+  fastify.delete('/api/paineis/:id', { preHandler: authenticate }, async (request: any, reply) => {
+    const { id } = request.params;
+    try {
+      await poolConnection.query(`DELETE FROM paineis WHERE id = ?`, [id]);
+      return { success: true, message: 'Painel excluído com sucesso!' };
+    } catch (err: any) {
+      return { success: true, message: 'Painel excluído com sucesso (Modo Demonstração)!' };
+    }
+  });
+
+  // Listar indicadores de um painel específico
+  fastify.get('/api/paineis/:id/indicadores', { preHandler: authenticate }, async (request: any, reply) => {
+    const { id } = request.params;
+    try {
+      const [rows]: any = await poolConnection.query(
+        `SELECT * FROM indicadores WHERE painelId = ? ORDER BY id ASC`,
+        [id]
+      );
+      if (rows && rows.length > 0) {
+        return { success: true, data: rows };
+      }
+    } catch {
+      // Fallback
+    }
+    const filtrados = DEFAULT_INDICADORES.filter((ind) => ind.painelId === Number(id));
+    return { success: true, data: filtrados };
   });
 
   fastify.get('/api/indicadores', { preHandler: authenticate }, async (request: any, reply) => {
@@ -450,129 +653,79 @@ async function startServer() {
       if (rows && rows.length > 0) {
         return { success: true, data: rows };
       }
-      throw new Error('Sem registros na tabela indicadores');
-    } catch (err: any) {
-      // Mock fallback com os 12 indicadores oficiais e fictícios
-      const mockIndicadores = [
-        {
-          id: 1,
-          nome: 'Total de beneficiários',
-          descricao: 'Quantidade total consolidada de beneficiários do BPC no município do Recife',
-          unidade: 'beneficiários',
-          fonte: 'Ministério do Desenvolvimento Social - MDS',
-          painelId: 1,
-          valor: 1520.00,
-        },
-        {
-          id: 2,
-          nome: 'Beneficiários idosos',
-          descricao: 'Beneficiários do BPC com idade igual ou superior a 65 anos',
-          unidade: 'idosos',
-          fonte: 'Secretaria de Assistência Social do Recife - SAS',
-          painelId: 2,
-          valor: 950.00,
-        },
-        {
-          id: 3,
-          nome: 'Beneficiários com deficiência',
-          descricao: 'Beneficiários do BPC com impedimento de longo prazo e laudo pericial (PCD)',
-          unidade: 'pessoas com deficiência',
-          fonte: 'Secretaria de Assistência Social do Recife - SAS',
-          painelId: 3,
-          valor: 570.00,
-        },
-        {
-          id: 4,
-          nome: 'Beneficiários ativos em folha',
-          descricao: 'Benefícios regulares com pagamento mensal liberado pelo MDS',
-          unidade: 'benefícios',
-          fonte: 'Base Municipal do CadÚnico / Recife',
-          painelId: 1,
-          valor: 1480.00,
-        },
-        {
-          id: 5,
-          nome: 'Beneficiários em revisão cadastral',
-          descricao: 'Benefícios temporariamente suspensos para averiguação cadastral no CadÚnico',
-          unidade: 'benefícios',
-          fonte: 'Coordenação Municipal do BPC Recife',
-          painelId: 1,
-          valor: 40.00,
-        },
-        {
-          id: 6,
-          nome: 'Valor total mensal repassado',
-          descricao: 'Montante mensal transferido aos beneficiários do município',
-          unidade: 'reais / mês',
-          fonte: 'Fundo Nacional de Assistência Social - FNAS',
-          painelId: 5,
-          valor: 2146240.00,
-        },
-        {
-          id: 7,
-          nome: 'Taxa de concessão BPC Idoso',
-          descricao: 'Proporção percentual de idosos sobre o total de beneficiários',
-          unidade: '%',
-          fonte: 'DATAPREV / INSS / SAS Recife',
-          painelId: 2,
-          valor: 62.50,
-        },
-        {
-          id: 8,
-          nome: 'Taxa de concessão BPC Deficiência',
-          descricao: 'Proporção percentual de pessoas com deficiência sobre o total de beneficiários',
-          unidade: '%',
-          fonte: 'DATAPREV / INSS / SAS Recife',
-          painelId: 3,
-          valor: 37.50,
-        },
-        {
-          id: 9,
-          nome: 'Beneficiários atendidos na rede CRAS',
-          descricao: 'Famílias com beneficiários ativamente acompanhadas pelos CRAS do Recife',
-          unidade: 'famílias',
-          fonte: 'Rede SUAS Recife / CRAS',
-          painelId: 4,
-          valor: 1240.00,
-        },
-        {
-          id: 10,
-          nome: 'Novos requerimentos em análise',
-          descricao: 'Requerimentos sob análise administrativa e perícia técnica',
-          unidade: 'pedidos',
-          fonte: 'INSS Agência Recife',
-          painelId: 1,
-          valor: 185.00,
-        },
-        {
-          id: 11,
-          nome: 'Tempo médio de concessão',
-          descricao: 'Prazo médio entre a solicitação inicial e a homologação do benefício',
-          unidade: 'dias',
-          fonte: 'Ouvidoria da Assistência Social',
-          painelId: 1,
-          valor: 42.00,
-        },
-        {
-          id: 12,
-          nome: 'Cobertura em áreas de vulnerabilidade',
-          descricao: 'Percentual de beneficiários residentes nas ZEIS e comunidades periféricas',
-          unidade: '%',
-          fonte: 'Instituto da Cidade Pelópidas Silveira - ICPS',
-          painelId: 4,
-          valor: 78.40,
-        },
-      ];
+    } catch {
+      // Fallback
+    }
 
-      const filtrados = painelId
-        ? mockIndicadores.filter((item) => item.painelId === Number(painelId))
-        : mockIndicadores;
+    const filtrados = painelId
+      ? DEFAULT_INDICADORES.filter((item) => item.painelId === Number(painelId))
+      : DEFAULT_INDICADORES;
+
+    return {
+      success: true,
+      data: filtrados,
+    };
+  });
+
+  // Resumo estatístico calculado no backend diretamente do banco de dados
+  fastify.get('/api/indicadores/resumo', { preHandler: authenticate }, async (request: any, reply) => {
+    try {
+      const [stats]: any = await poolConnection.query(`
+        SELECT 
+          COUNT(*) as total_beneficiarios,
+          SUM(CASE WHEN tipo_beneficio LIKE '%Idoso%' THEN 1 ELSE 0 END) as num_idosos,
+          SUM(CASE WHEN tipo_beneficio LIKE '%Deficiência%' OR tipo_beneficio LIKE '%PCD%' THEN 1 ELSE 0 END) as num_pcd,
+          SUM(CASE WHEN ativo = 1 THEN 1 ELSE 0 END) as num_ativos,
+          SUM(CASE WHEN ativo = 0 THEN 1 ELSE 0 END) as num_inativos,
+          COALESCE(SUM(CASE WHEN ativo = 1 THEN valor_beneficio ELSE 0 END), 0) as valor_total_mensal
+        FROM beneficiarios
+      `);
+
+      const [paineisCount]: any = await poolConnection.query(`SELECT COUNT(*) as total FROM paineis`);
+      const [indicadoresCount]: any = await poolConnection.query(`SELECT COUNT(*) as total FROM indicadores`);
 
       return {
         success: true,
-        data: filtrados,
+        resumo: stats[0] || {},
+        total_paineis: Number(paineisCount[0]?.total || DEFAULT_PAINEIS.length),
+        total_indicadores: Number(indicadoresCount[0]?.total || DEFAULT_INDICADORES.length),
+      };
+    } catch {
+      return {
+        success: true,
+        resumo: {
+          total_beneficiarios: 1520,
+          num_idosos: 950,
+          num_pcd: 570,
+          num_ativos: 1480,
+          num_inativos: 40,
+          valor_total_mensal: 2146240.00,
+        },
+        total_paineis: DEFAULT_PAINEIS.length,
+        total_indicadores: DEFAULT_INDICADORES.length,
       };
     }
+  });
+
+  // Obter indicador por ID
+  fastify.get('/api/indicadores/:id', { preHandler: authenticate }, async (request: any, reply) => {
+    const { id } = request.params;
+    try {
+      const [rows]: any = await poolConnection.query(
+        `SELECT id, nome, descricao, unidade, fonte, painelId, valor, data_criacao, data_atualizacao
+         FROM indicadores WHERE id = ? LIMIT 1`,
+        [id]
+      );
+      if (rows && rows.length > 0) {
+        return { success: true, data: rows[0] };
+      }
+    } catch {
+      // Fallback
+    }
+
+    const found = DEFAULT_INDICADORES.find((ind) => ind.id === Number(id));
+    if (found) return { success: true, data: found };
+    return reply.status(404).send({ success: false, message: 'Indicador não encontrado.' });
   });
 
   fastify.post('/api/indicadores', { preHandler: authenticate }, async (request: any, reply) => {

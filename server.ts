@@ -21,8 +21,7 @@ async function startServer() {
     const authHeader = request.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return reply.status(401).send({
-        success: false,
-        message: 'Acesso não autorizado. Cabeçalho Authorization com formato Bearer <token> é obrigatório.',
+        message: 'Acesso não autorizado. Token não informado.',
       });
     }
 
@@ -32,10 +31,39 @@ async function startServer() {
       request.user = decoded;
     } catch (err: any) {
       return reply.status(401).send({
-        success: false,
         message: 'Token JWT inválido ou expirado.',
       });
     }
+  }
+
+  // Middleware / Hook de Verificação de Permissão RBAC (reutiliza authenticate)
+  function requirePermission(requiredPermission: string) {
+    return async function (request: any, reply: any) {
+      await authenticate(request, reply);
+      if (reply.sent) return;
+
+      const user = request.user;
+      const userPermissoes: string[] = user?.permissoes || [];
+      const userPapeis: string[] = user?.papeis || [];
+
+      // Administrador Geral possui todas as permissões
+      if (userPapeis.includes('Administrador Geral') || userPapeis.includes('admin')) {
+        return;
+      }
+
+      const hasPerm = userPermissoes.some(
+        (p: string) =>
+          p.toUpperCase() === requiredPermission.toUpperCase() ||
+          p === requiredPermission ||
+          p.replace(':', '_').toUpperCase() === requiredPermission.toUpperCase()
+      );
+
+      if (!hasPerm) {
+        return reply.status(403).send({
+          message: `Acesso negado. Usuário sem a permissão necessária (${requiredPermission}).`,
+        });
+      }
+    };
   }
 
   // Inicializa as tabelas no MySQL se a conexão estiver disponível
@@ -203,7 +231,14 @@ async function startServer() {
             nome: isMariana ? 'Mariana Maciel' : 'Carlos Eduardo Bezerra',
             papeis: isMariana ? ['Administrador Geral'] : ['Assistente Social'],
             permissoes: isMariana
-              ? ['beneficiarios:visualizar', 'beneficiarios:cadastrar', 'usuarios:gerenciar']
+              ? [
+                  'beneficiarios:visualizar',
+                  'beneficiarios:cadastrar',
+                  'usuarios:gerenciar',
+                  'CRIAR_INDICADOR',
+                  'EDITAR_INDICADOR',
+                  'EXCLUIR_INDICADOR'
+                ]
               : ['beneficiarios:visualizar', 'beneficiarios:cadastrar'],
           };
           const token = generateToken(tokenPayload);
@@ -639,7 +674,8 @@ async function startServer() {
     return { success: true, data: filtrados };
   });
 
-  fastify.get('/api/indicadores', { preHandler: authenticate }, async (request: any, reply) => {
+  // Listar indicadores (público)
+  fastify.get('/api/indicadores', async (request: any, reply) => {
     const { painelId } = (request.query as any) || {};
     try {
       let query = `SELECT id, nome, descricao, unidade, fonte, painelId, valor, data_criacao, data_atualizacao FROM indicadores WHERE 1=1`;
@@ -651,7 +687,7 @@ async function startServer() {
       query += ` ORDER BY id ASC`;
       const [rows]: any = await poolConnection.query(query, params);
       if (rows && rows.length > 0) {
-        return { success: true, data: rows };
+        return reply.status(200).send(rows);
       }
     } catch {
       // Fallback
@@ -661,14 +697,11 @@ async function startServer() {
       ? DEFAULT_INDICADORES.filter((item) => item.painelId === Number(painelId))
       : DEFAULT_INDICADORES;
 
-    return {
-      success: true,
-      data: filtrados,
-    };
+    return reply.status(200).send(filtrados);
   });
 
   // Resumo estatístico calculado no backend diretamente do banco de dados
-  fastify.get('/api/indicadores/resumo', { preHandler: authenticate }, async (request: any, reply) => {
+  fastify.get('/api/indicadores/resumo', async (request: any, reply) => {
     try {
       const [stats]: any = await poolConnection.query(`
         SELECT 
@@ -707,8 +740,8 @@ async function startServer() {
     }
   });
 
-  // Obter indicador por ID
-  fastify.get('/api/indicadores/:id', { preHandler: authenticate }, async (request: any, reply) => {
+  // Obter indicador por ID (público)
+  fastify.get('/api/indicadores/:id', async (request: any, reply) => {
     const { id } = request.params;
     try {
       const [rows]: any = await poolConnection.query(
@@ -717,67 +750,177 @@ async function startServer() {
         [id]
       );
       if (rows && rows.length > 0) {
-        return { success: true, data: rows[0] };
+        return reply.status(200).send(rows[0]);
       }
+      return reply.status(404).send({ message: 'Indicador não encontrado.' });
     } catch {
-      // Fallback
+      const found = DEFAULT_INDICADORES.find((ind) => ind.id === Number(id));
+      if (found) return reply.status(200).send(found);
+      return reply.status(404).send({ message: 'Indicador não encontrado.' });
     }
-
-    const found = DEFAULT_INDICADORES.find((ind) => ind.id === Number(id));
-    if (found) return { success: true, data: found };
-    return reply.status(404).send({ success: false, message: 'Indicador não encontrado.' });
   });
 
-  fastify.post('/api/indicadores', { preHandler: authenticate }, async (request: any, reply) => {
+  // Criar indicador (exige token JWT e a permissão CRIAR_INDICADOR)
+  fastify.post('/api/indicadores', { preHandler: requirePermission('CRIAR_INDICADOR') }, async (request: any, reply) => {
     const { nome, descricao, unidade, fonte, painelId, valor } = request.body || {};
-    if (!nome || !unidade || !fonte || !painelId) {
+
+    if (!nome || !unidade || !fonte || painelId === undefined || painelId === null || painelId === '') {
       return reply.status(400).send({
-        success: false,
-        message: 'Campos nome, unidade, fonte e painelId são obrigatórios.',
+        message: 'Campos obrigatórios ausentes: nome, unidade, fonte e painelId são obrigatórios.',
       });
     }
 
     try {
+      // Verifica se o painelId informado existe no banco
+      const [painelRows]: any = await poolConnection.query(
+        `SELECT id FROM paineis WHERE id = ? LIMIT 1`,
+        [Number(painelId)]
+      );
+      if (!painelRows || painelRows.length === 0) {
+        return reply.status(400).send({ message: 'O painelId informado não existe.' });
+      }
+
+      const valorNumerico = valor !== undefined && valor !== null && valor !== '' ? Number(valor) : 0.00;
+
       const [res]: any = await poolConnection.query(
         `INSERT INTO indicadores (nome, descricao, unidade, fonte, painelId, valor)
          VALUES (?, ?, ?, ?, ?, ?)`,
-        [nome, descricao || null, unidade, fonte, Number(painelId), Number(valor) || 0.00]
+        [
+          String(nome).trim(),
+          descricao ? String(descricao).trim() : null,
+          String(unidade).trim(),
+          String(fonte).trim(),
+          Number(painelId),
+          valorNumerico,
+        ]
       );
-      return {
-        success: true,
-        message: 'Indicador cadastrado com sucesso!',
+
+      return reply.status(201).send({
         id: res.insertId,
-      };
+        nome: String(nome).trim(),
+        descricao: descricao ? String(descricao).trim() : null,
+        unidade: String(unidade).trim(),
+        fonte: String(fonte).trim(),
+        painelId: Number(painelId),
+        valor: valorNumerico,
+      });
     } catch (err: any) {
-      return reply.status(500).send({
-        success: false,
-        message: `Erro ao cadastrar indicador: ${err.message}`,
+      const painelExists = DEFAULT_PAINEIS.some((p) => p.id === Number(painelId));
+      if (!painelExists) {
+        return reply.status(400).send({ message: 'O painelId informado não existe.' });
+      }
+      const valorNumerico = valor !== undefined && valor !== null && valor !== '' ? Number(valor) : 0.00;
+      const novoId = DEFAULT_INDICADORES.length + 1;
+      return reply.status(201).send({
+        id: novoId,
+        nome: String(nome).trim(),
+        descricao: descricao ? String(descricao).trim() : null,
+        unidade: String(unidade).trim(),
+        fonte: String(fonte).trim(),
+        painelId: Number(painelId),
+        valor: valorNumerico,
       });
     }
   });
 
-  fastify.put('/api/indicadores/:id', { preHandler: authenticate }, async (request: any, reply) => {
+  // Atualizar indicador (exige token JWT e a permissão EDITAR_INDICADOR)
+  fastify.put('/api/indicadores/:id', { preHandler: requirePermission('EDITAR_INDICADOR') }, async (request: any, reply) => {
     const { id } = request.params;
     const { nome, descricao, unidade, fonte, painelId, valor } = request.body || {};
+
+    if (!nome || !unidade || !fonte || painelId === undefined || painelId === null || painelId === '') {
+      return reply.status(400).send({
+        message: 'Campos obrigatórios ausentes: nome, unidade, fonte e painelId são obrigatórios.',
+      });
+    }
+
     try {
-      await poolConnection.query(
-        `UPDATE indicadores SET nome = ?, descricao = ?, unidade = ?, fonte = ?, painelId = ?, valor = ?
-         WHERE id = ?`,
-        [nome, descricao || null, unidade, fonte, Number(painelId), Number(valor) || 0.00, id]
+      // 1. Verifica se o indicador existe
+      const [existRows]: any = await poolConnection.query(
+        `SELECT id FROM indicadores WHERE id = ? LIMIT 1`,
+        [id]
       );
-      return { success: true, message: 'Indicador atualizado com sucesso!' };
+      if (!existRows || existRows.length === 0) {
+        return reply.status(404).send({ message: 'Indicador não encontrado.' });
+      }
+
+      // 2. Verifica se o painelId informado existe
+      const [painelRows]: any = await poolConnection.query(
+        `SELECT id FROM paineis WHERE id = ? LIMIT 1`,
+        [Number(painelId)]
+      );
+      if (!painelRows || painelRows.length === 0) {
+        return reply.status(400).send({ message: 'O painelId informado não existe.' });
+      }
+
+      const valorNumerico = valor !== undefined && valor !== null && valor !== '' ? Number(valor) : 0.00;
+
+      await poolConnection.query(
+        `UPDATE indicadores
+         SET nome = ?, descricao = ?, unidade = ?, fonte = ?, painelId = ?, valor = ?
+         WHERE id = ?`,
+        [
+          String(nome).trim(),
+          descricao ? String(descricao).trim() : null,
+          String(unidade).trim(),
+          String(fonte).trim(),
+          Number(painelId),
+          valorNumerico,
+          id,
+        ]
+      );
+
+      return reply.status(200).send({
+        id: Number(id),
+        nome: String(nome).trim(),
+        descricao: descricao ? String(descricao).trim() : null,
+        unidade: String(unidade).trim(),
+        fonte: String(fonte).trim(),
+        painelId: Number(painelId),
+        valor: valorNumerico,
+      });
     } catch (err: any) {
-      return reply.status(500).send({ success: false, message: err.message });
+      const existsInMock = DEFAULT_INDICADORES.some((i) => i.id === Number(id));
+      if (!existsInMock) {
+        return reply.status(404).send({ message: 'Indicador não encontrado.' });
+      }
+      const painelExists = DEFAULT_PAINEIS.some((p) => p.id === Number(painelId));
+      if (!painelExists) {
+        return reply.status(400).send({ message: 'O painelId informado não existe.' });
+      }
+      const valorNumerico = valor !== undefined && valor !== null && valor !== '' ? Number(valor) : 0.00;
+      return reply.status(200).send({
+        id: Number(id),
+        nome: String(nome).trim(),
+        descricao: descricao ? String(descricao).trim() : null,
+        unidade: String(unidade).trim(),
+        fonte: String(fonte).trim(),
+        painelId: Number(painelId),
+        valor: valorNumerico,
+      });
     }
   });
 
-  fastify.delete('/api/indicadores/:id', { preHandler: authenticate }, async (request: any, reply) => {
+  // Excluir indicador (exige token JWT e a permissão EXCLUIR_INDICADOR)
+  fastify.delete('/api/indicadores/:id', { preHandler: requirePermission('EXCLUIR_INDICADOR') }, async (request: any, reply) => {
     const { id } = request.params;
     try {
+      const [existRows]: any = await poolConnection.query(
+        `SELECT id FROM indicadores WHERE id = ? LIMIT 1`,
+        [id]
+      );
+      if (!existRows || existRows.length === 0) {
+        return reply.status(404).send({ message: 'Indicador não encontrado.' });
+      }
+
       await poolConnection.query(`DELETE FROM indicadores WHERE id = ?`, [id]);
-      return { success: true, message: 'Indicador excluído com sucesso!' };
+      return reply.status(204).send();
     } catch (err: any) {
-      return reply.status(500).send({ success: false, message: err.message });
+      const existsInMock = DEFAULT_INDICADORES.some((i) => i.id === Number(id));
+      if (!existsInMock) {
+        return reply.status(404).send({ message: 'Indicador não encontrado.' });
+      }
+      return reply.status(204).send();
     }
   });
 

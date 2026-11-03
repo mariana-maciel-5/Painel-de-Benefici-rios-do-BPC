@@ -43,6 +43,13 @@ export const indicadorService = {
     });
   },
 
+  async atualizar(id: number, payload: Partial<NovoIndicadorPayload>): Promise<any> {
+    return apiClient(`/api/indicadores/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  },
+
   async excluir(id: number): Promise<{ success: boolean; message: string }> {
     return apiClient(`/api/indicadores/${id}`, {
       method: 'DELETE',

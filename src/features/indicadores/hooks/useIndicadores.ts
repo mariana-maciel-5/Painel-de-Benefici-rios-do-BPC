@@ -20,10 +20,15 @@ export function useIndicadores(enabled: boolean = true) {
         indicadorService.getPaineis().catch(() => ({ success: false, data: [] })),
       ]);
 
-      if (indRes.success && Array.isArray(indRes.data)) {
+      if (Array.isArray(indRes)) {
+        setIndicadores(indRes);
+      } else if (indRes && indRes.success && Array.isArray(indRes.data)) {
         setIndicadores(indRes.data);
       }
-      if (panRes.success && Array.isArray(panRes.data)) {
+
+      if (Array.isArray(panRes)) {
+        setPaineis(panRes);
+      } else if (panRes && panRes.success && Array.isArray(panRes.data)) {
         setPaineis(panRes.data);
       }
     } catch (err: any) {

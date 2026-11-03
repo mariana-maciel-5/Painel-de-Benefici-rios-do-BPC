@@ -44,6 +44,9 @@ export async function runSeed() {
       { id: 6, nome: 'relatorios:gerar', descricao: 'Exportar relatórios estatísticos e operacionais' },
       { id: 7, nome: 'usuarios:gerenciar', descricao: 'Criar, editar e definir permissões de operadores' },
       { id: 8, nome: 'auditoria:consultar', descricao: 'Consultar logs de auditoria e trilha de auditoria' },
+      { id: 9, nome: 'CRIAR_INDICADOR', descricao: 'Criar novos indicadores na entidade indicadores' },
+      { id: 10, nome: 'EDITAR_INDICADOR', descricao: 'Atualizar dados e valores de indicadores' },
+      { id: 11, nome: 'EXCLUIR_INDICADOR', descricao: 'Excluir indicadores cadastrados' },
     ];
 
     for (const perm of permissoesData) {
@@ -76,7 +79,7 @@ export async function runSeed() {
 
     // 4. Associação Papel - Permissão (papel_permissao)
     const papelPermissoes = [
-      // Administrador Geral (1): Todas as permissões
+      // Administrador Geral (1): Todas as permissões incluindo indicadores
       { papel_id: 1, permissao_id: 1 },
       { papel_id: 1, permissao_id: 2 },
       { papel_id: 1, permissao_id: 3 },
@@ -85,6 +88,9 @@ export async function runSeed() {
       { papel_id: 1, permissao_id: 6 },
       { papel_id: 1, permissao_id: 7 },
       { papel_id: 1, permissao_id: 8 },
+      { papel_id: 1, permissao_id: 9 },  // CRIAR_INDICADOR
+      { papel_id: 1, permissao_id: 10 }, // EDITAR_INDICADOR
+      { papel_id: 1, permissao_id: 11 }, // EXCLUIR_INDICADOR
 
       // Coordenador CRAS (2): Visualizar, cadastrar, editar, emitir parecer e relatórios
       { papel_id: 2, permissao_id: 1 },
@@ -92,6 +98,8 @@ export async function runSeed() {
       { papel_id: 2, permissao_id: 3 },
       { papel_id: 2, permissao_id: 5 },
       { papel_id: 2, permissao_id: 6 },
+      { papel_id: 2, permissao_id: 9 },  // CRIAR_INDICADOR
+      { papel_id: 2, permissao_id: 10 }, // EDITAR_INDICADOR
 
       // Assistente Social (3): Visualizar, cadastrar, editar e emitir parecer
       { papel_id: 3, permissao_id: 1 },

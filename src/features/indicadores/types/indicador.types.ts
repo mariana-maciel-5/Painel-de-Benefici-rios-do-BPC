@@ -36,3 +36,5 @@ export interface NovoIndicadorPayload {
   painelId: number;
   valor?: number;
 }
+
+export type PaletaCores = 'padrao' | 'civica' | 'esmeralda' | 'executivo';

@@ -16,13 +16,13 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
   return (
     <aside className="w-64 bg-white border-r border-slate-200 flex flex-col">
       <div className="p-6 border-b border-slate-100">
-        <div className="flex items-center gap-2.5 text-blue-600 font-bold text-xl">
-          <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center text-white text-base shadow-sm shadow-blue-500/30">
+        <div className="flex items-center gap-2.5 text-blue-900 font-bold text-xl">
+          <div className="w-9 h-9 bg-blue-900 rounded-xl flex items-center justify-center text-amber-400 text-base shadow-sm shadow-blue-900/30 border border-blue-800">
             <ShieldCheck className="w-5 h-5" />
           </div>
           <div>
-            <span className="tracking-tight">{APP_CONFIG.TITLE}</span>
-            <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold -mt-1">
+            <span className="tracking-tight text-blue-950">{APP_CONFIG.TITLE}</span>
+            <p className="text-[10px] uppercase tracking-wider text-amber-700 font-bold -mt-0.5">
               {APP_CONFIG.SUBTITLE}
             </p>
           </div>
@@ -34,15 +34,15 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
           onClick={() => setActiveTab('beneficiarios')}
           className={`flex items-center justify-between px-3 py-2.5 rounded-xl font-medium text-sm cursor-pointer transition-all ${
             activeTab === 'beneficiarios'
-              ? 'bg-blue-600 text-white font-semibold shadow-xs'
+              ? 'bg-blue-900 text-white font-semibold shadow-xs'
               : 'text-slate-700 hover:bg-slate-50'
           }`}
         >
           <div className="flex items-center gap-3">
-            <HeartHandshake className="w-4 h-4" /> Beneficiários BPC
+            <HeartHandshake className="w-4 h-4 text-amber-400" /> Beneficiários BPC
           </div>
           {activeTab === 'beneficiarios' && (
-            <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
           )}
         </div>
 
@@ -50,15 +50,15 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
           onClick={() => setActiveTab('indicadores')}
           className={`flex items-center justify-between px-3 py-2.5 rounded-xl font-medium text-sm cursor-pointer transition-all ${
             activeTab === 'indicadores'
-              ? 'bg-blue-600 text-white font-semibold shadow-xs'
+              ? 'bg-blue-900 text-white font-semibold shadow-xs'
               : 'text-slate-700 hover:bg-slate-50'
           }`}
         >
           <div className="flex items-center gap-3">
-            <TrendingUp className="w-4 h-4" /> Indicadores BPC
+            <TrendingUp className="w-4 h-4 text-amber-400" /> Indicadores BPC
           </div>
           {activeTab === 'indicadores' && (
-            <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
           )}
         </div>
 

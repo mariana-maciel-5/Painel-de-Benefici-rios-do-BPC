@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { 
   Search, 
   Plus, 
@@ -8,11 +9,12 @@ import {
   Sparkles,
   Info
 } from 'lucide-react';
-import type { IndicadorItem } from '../types/indicador.types';
+import type { IndicadorItem, PainelItem } from '../types/indicador.types';
 
 interface IndicadoresTableProps {
   indicadores: IndicadorItem[];
   totalCount: number;
+  paineis?: PainelItem[];
   loading: boolean;
   sincronizando: boolean;
   searchTerm: string;
@@ -26,6 +28,7 @@ interface IndicadoresTableProps {
 export function IndicadoresTable({
   indicadores,
   totalCount,
+  paineis = [],
   loading,
   sincronizando,
   searchTerm,
@@ -35,6 +38,8 @@ export function IndicadoresTable({
   onSincronizar,
   onExcluir,
 }: IndicadoresTableProps) {
+  const [painelFiltro, setPainelFiltro] = useState<string>('todos');
+
   const formatNumber = (val?: number | string) => {
     if (val === undefined || val === null || val === '') return '-';
     const num = Number(val);
@@ -42,33 +47,67 @@ export function IndicadoresTable({
     return num.toLocaleString('pt-BR');
   };
 
+  const getNomePainel = (painelId: number) => {
+    const p = paineis.find((item) => item.id === painelId);
+    return p ? p.nome : `Painel #${painelId}`;
+  };
+
+  const indicadoresFiltrados = indicadores.filter((ind) => {
+    if (painelFiltro !== 'todos' && ind.painelId !== Number(painelFiltro)) {
+      return false;
+    }
+    return true;
+  });
+
   return (
     <div className="space-y-5">
       {/* Box de Notificação da Estrutura Genérica */}
       <div className="bg-blue-50/70 border border-blue-200/80 rounded-2xl p-4 flex items-start gap-3">
-        <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+        <Info className="w-5 h-5 text-blue-800 shrink-0 mt-0.5" />
         <div className="space-y-1 text-xs text-slate-700">
           <p className="font-bold text-blue-900">
-            Estrutura Oficial da Entidade Indicadores (Tabela Genérica)
+            Estrutura Oficial da Entidade Indicadores (Tabela Genérica Relacional)
           </p>
           <p className="text-slate-600">
-            Cada linha desta tabela é um indicador específico (ex: <em>Total de beneficiários do BPC</em>, <em>Número de idosos</em>, <em>Número de pessoas com deficiência</em>).
-            As colunas do banco seguem o modelo formal: <code className="bg-white px-1.5 py-0.5 rounded border border-blue-200 font-mono text-blue-800">id</code>, <code className="bg-white px-1.5 py-0.5 rounded border border-blue-200 font-mono text-blue-800">nome</code>, <code className="bg-white px-1.5 py-0.5 rounded border border-blue-200 font-mono text-blue-800">descricao</code>, <code className="bg-white px-1.5 py-0.5 rounded border border-blue-200 font-mono text-blue-800">unidade</code>, <code className="bg-white px-1.5 py-0.5 rounded border border-blue-200 font-mono text-blue-800">fonte</code> e <code className="bg-white px-1.5 py-0.5 rounded border border-blue-200 font-mono text-blue-800">painelId</code>.
+            Cada linha desta tabela é um indicador (ex: <em>Total de beneficiários</em>, <em>Beneficiários idosos</em>, <em>Beneficiários com deficiência</em>), vinculado a um <strong>Painel Temático (FK painelId)</strong>.
+            As colunas do banco seguem o modelo formal: <code className="bg-white px-1.5 py-0.5 rounded border border-blue-200 font-mono text-blue-900">id</code>, <code className="bg-white px-1.5 py-0.5 rounded border border-blue-200 font-mono text-blue-900">nome</code>, <code className="bg-white px-1.5 py-0.5 rounded border border-blue-200 font-mono text-blue-900">descricao</code>, <code className="bg-white px-1.5 py-0.5 rounded border border-blue-200 font-mono text-blue-900">unidade</code>, <code className="bg-white px-1.5 py-0.5 rounded border border-blue-200 font-mono text-blue-900">fonte</code> e <code className="bg-white px-1.5 py-0.5 rounded border border-blue-200 font-mono text-blue-900">painelId</code>.
           </p>
         </div>
       </div>
 
-      {/* Barra de Ações: Busca, Sincronização e Cadastro */}
+      {/* Barra de Ações: Busca, Filtro de Painel, Sincronização e Cadastro */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div className="relative flex-1 max-w-md">
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Buscar por nome, unidade ou fonte do indicador..."
-            className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
-          />
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+        <div className="flex flex-wrap items-center gap-3 flex-1">
+          {/* Busca por texto */}
+          <div className="relative flex-1 min-w-[240px] max-w-md">
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Buscar por nome, unidade ou fonte do indicador..."
+              className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all"
+            />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+          </div>
+
+          {/* Filtro por Painel Temático */}
+          {paineis.length > 0 && (
+            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-xs">
+              <Layers className="w-3.5 h-3.5 text-blue-800" />
+              <select
+                value={painelFiltro}
+                onChange={(e) => setPainelFiltro(e.target.value)}
+                className="bg-transparent border-none text-xs font-semibold text-slate-800 focus:outline-none cursor-pointer"
+              >
+                <option value="todos">Todos os Painéis ({paineis.length})</option>
+                {paineis.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    #{p.id} - {p.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -93,7 +132,7 @@ export function IndicadoresTable({
 
           <button
             onClick={onOpenNovoModal}
-            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
+            className="px-4 py-2.5 bg-blue-800 hover:bg-blue-900 text-white rounded-xl text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4" /> Novo Indicador
           </button>
@@ -101,7 +140,7 @@ export function IndicadoresTable({
       </div>
 
       {/* Tabela de Indicadores Genéricos */}
-      {indicadores.length > 0 ? (
+      {indicadoresFiltrados.length > 0 ? (
         <div className="rounded-xl border border-slate-200 overflow-hidden bg-white shadow-xs">
           <table className="w-full text-left border-collapse">
             <thead className="bg-slate-50 text-[10px] uppercase font-bold text-slate-500 border-b border-slate-200 tracking-wider">
@@ -111,13 +150,13 @@ export function IndicadoresTable({
                 <th className="px-5 py-3.5">Descrição</th>
                 <th className="px-5 py-3.5">Unidade</th>
                 <th className="px-5 py-3.5">Fonte dos Dados</th>
-                <th className="px-5 py-3.5">Painel (FK)</th>
+                <th className="px-5 py-3.5">Painel Vinculado (FK)</th>
                 <th className="px-5 py-3.5 text-right">Valor Atual</th>
                 <th className="px-5 py-3.5 text-center">Ações</th>
               </tr>
             </thead>
             <tbody className="text-sm text-slate-700 divide-y divide-slate-100">
-              {indicadores.map((ind) => (
+              {indicadoresFiltrados.map((ind) => (
                 <tr key={ind.id} className="hover:bg-slate-50/70 transition-colors">
                   {/* ID */}
                   <td className="px-5 py-3.5 font-mono text-xs text-slate-500">
@@ -127,7 +166,7 @@ export function IndicadoresTable({
                   {/* Nome do Indicador */}
                   <td className="px-5 py-3.5 font-bold text-slate-800">
                     <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
+                      <span className="w-2 h-2 rounded-full bg-blue-800 shrink-0" />
                       <span>{ind.nome}</span>
                     </div>
                   </td>
@@ -151,8 +190,14 @@ export function IndicadoresTable({
 
                   {/* PainelId */}
                   <td className="px-5 py-3.5">
-                    <span className="inline-flex items-center gap-1 text-xs font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200/60">
-                      <Layers className="w-3 h-3" /> painelId: {ind.painelId}
+                    <span className="inline-flex flex-col gap-0.5 text-xs">
+                      <span className="font-semibold text-blue-900 flex items-center gap-1">
+                        <Layers className="w-3 h-3 text-amber-600" />
+                        {getNomePainel(ind.painelId)}
+                      </span>
+                      <span className="font-mono text-[10px] text-slate-400">
+                        painelId: {ind.painelId}
+                      </span>
                     </span>
                   </td>
 
@@ -183,18 +228,8 @@ export function IndicadoresTable({
           </table>
         </div>
       ) : (
-        <div className="text-center py-12 bg-white rounded-xl border border-dashed border-slate-300">
-          <TrendingUp className="w-10 h-10 text-slate-400 mx-auto mb-2" />
-          <p className="text-sm font-semibold text-slate-700">Nenhum indicador encontrado.</p>
-          <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-            Cadastre novos registros na tabela de indicadores genéricos da Assistência Social.
-          </p>
-          <button
-            onClick={onOpenNovoModal}
-            className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold shadow-xs inline-flex items-center gap-1.5 transition-all cursor-pointer"
-          >
-            <Plus className="w-4 h-4" /> Cadastrar Primeiro Indicador
-          </button>
+        <div className="p-8 text-center bg-white rounded-xl border border-dashed border-slate-200">
+          <p className="text-sm text-slate-500">Nenhum indicador encontrado para o filtro selecionado.</p>
         </div>
       )}
     </div>

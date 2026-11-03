@@ -10,8 +10,7 @@ import { PapelListTable } from '../features/papeis/components/PapelListTable';
 import { BeneficiarioListTable } from '../features/beneficiarios/components/BeneficiarioListTable';
 import { BeneficiarioStatsCards } from '../features/beneficiarios/components/BeneficiarioStatsCards';
 import { BeneficiarioModal } from '../features/beneficiarios/components/BeneficiarioModal';
-import { IndicadoresTable } from '../features/indicadores/components/IndicadoresTable';
-import { NovoIndicadorModal } from '../features/indicadores/components/NovoIndicadorModal';
+import { IndicadoresDashboardView } from '../features/indicadores/components/IndicadoresDashboardView';
 import { useUsuarios } from '../features/usuarios/hooks/useUsuarios';
 import { usePapeis } from '../features/papeis/hooks/usePapeis';
 import { useBeneficiarios } from '../features/beneficiarios/hooks/useBeneficiarios';
@@ -22,7 +21,6 @@ import { useAuthContext } from '../hooks/useAuthContext';
 export function DashboardPage() {
   const [activeTab, setActiveTab] = useState<DashboardTabType>('beneficiarios');
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-  const [isNovoIndicadorOpen, setIsNovoIndicadorOpen] = useState<boolean>(false);
   const [tokenCopied, setTokenCopied] = useState<boolean>(false);
 
   const { token, currentUser } = useAuthContext();
@@ -152,45 +150,21 @@ export function DashboardPage() {
         </div>
       )}
 
-      {/* 2. ABA DA NOVA ENTIDADE INDICADORES (GENÉRICA) */}
+      {/* 2. ABA DE INDICADORES BPC: CARDS E GRÁFICOS */}
       {activeTab === 'indicadores' && (
-        <div className="space-y-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="p-2 bg-blue-100 text-blue-700 rounded-xl">
-                  <TrendingUp className="w-5 h-5" />
-                </span>
-                <h2 className="text-xl font-bold text-slate-800 tracking-tight">
-                  Entidade Indicadores (Tabela Genérica)
-                </h2>
-              </div>
-              <p className="text-xs text-slate-500 mt-1">
-                Catálogo relacional genérico: <code className="bg-slate-100 px-1 py-0.5 rounded text-blue-700 font-mono">id</code>, <code className="bg-slate-100 px-1 py-0.5 rounded text-blue-700 font-mono">nome</code>, <code className="bg-slate-100 px-1 py-0.5 rounded text-blue-700 font-mono">descricao</code>, <code className="bg-slate-100 px-1 py-0.5 rounded text-blue-700 font-mono">unidade</code>, <code className="bg-slate-100 px-1 py-0.5 rounded text-blue-700 font-mono">fonte</code> e <code className="bg-slate-100 px-1 py-0.5 rounded text-blue-700 font-mono">painelId</code>. Os indicadores são as linhas da tabela.
-              </p>
-            </div>
-          </div>
-
-          <IndicadoresTable
-            indicadores={indicadores}
-            totalCount={totalIndicadores}
-            loading={indicadoresLoading}
-            sincronizando={sincronizandoIndicadores}
-            searchTerm={searchIndicadores}
-            setSearchTerm={setSearchIndicadores}
-            onRefresh={refetchIndicadores}
-            onOpenNovoModal={() => setIsNovoIndicadorOpen(true)}
-            onSincronizar={sincronizarIndicadores}
-            onExcluir={excluirIndicador}
-          />
-
-          <NovoIndicadorModal
-            isOpen={isNovoIndicadorOpen}
-            paineis={paineis}
-            onClose={() => setIsNovoIndicadorOpen(false)}
-            onSubmit={cadastrarIndicador}
-          />
-        </div>
+        <IndicadoresDashboardView
+          indicadores={indicadores}
+          totalCount={totalIndicadores}
+          paineis={paineis}
+          loading={indicadoresLoading}
+          sincronizando={sincronizandoIndicadores}
+          searchTerm={searchIndicadores}
+          setSearchTerm={setSearchIndicadores}
+          onRefresh={refetchIndicadores}
+          onSincronizar={sincronizarIndicadores}
+          onCadastrar={cadastrarIndicador}
+          onExcluir={excluirIndicador}
+        />
       )}
 
       {/* 3. DEMAIS ABAS DO SISTEMA */}
